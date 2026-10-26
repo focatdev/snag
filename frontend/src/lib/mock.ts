@@ -2,7 +2,7 @@
 import type { AppStatus, Bootstrap, Clip, Job, Settings } from "./api";
 
 const q = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
-// screenshot setups: ?mock&onboard, &update, &whatsnew, &nogpu, &noffmpeg, &waiting, &state=error
+// screenshot setups: ?mock&onboard, &update, &whatsnew, &nogpu, &noffmpeg, &waiting, &state=error, &readme
 const scenario = {
   onboard: q.has("onboard"),
   update: q.has("update"),
@@ -11,6 +11,7 @@ const scenario = {
   noFFmpeg: q.has("noffmpeg"),
   waiting: q.has("waiting"),
   state: (q.get("state") ?? "buffering") as "buffering" | "idle" | "error",
+  readme: q.has("readme"),
 };
 const nvErr = "NVIDIA driver too old, needs 610.00 or newer";
 
@@ -19,11 +20,18 @@ const listeners = new Map<string, Set<Listener>>();
 const emit = (name: string, data: unknown) => listeners.get(name)?.forEach((l) => l(data));
 
 const now = Date.now();
-const games = ["Roblox", "Valorant", "Counter-Strike 2", "Roblox", "Rocket League", "Desktop", "Valorant", "Roblox", "Marvel Rivals"];
+// readme shots use free games so the images can live in a public repo
+const readmeGames = ["SuperTuxKart", "Red Eclipse", "osu!", "Luanti", "OpenArena", "osu!", "SuperTuxKart", "Red Eclipse", "Luanti"];
+const readmeTitles = ["perfect start boost", "chaos in the middle of bath", "first full combo on this map", "apple forest by the lake", "took the lead on dm4", "7k mania 98%", "side by side into turn 2", "futuresport montage", "canyon walk"];
+const games = scenario.readme ? readmeGames : ["Roblox", "Valorant", "Counter-Strike 2", "Roblox", "Rocket League", "Desktop", "Valorant", "Roblox", "Marvel Rivals"];
+const liveGame = scenario.readme ? readmeGames[0] : "Roblox";
+
+// playwright serves these when taking readme shots
+export const mockThumb = (c: { id: string }) => (scenario.readme ? `/readme/${c.id}.jpg` : null);
 const clips: Clip[] = games.map((g, i) => ({
   id: `mock${i}`,
   path: `C:\\Users\\you\\Videos\\Snag\\${g} 2026-10-${24 - i} 19-3${i}-12.mp4`,
-  title: i === 1 ? "1v4 retake on B" : i === 0 ? "obby speedrun pb" : `${g} 2026-10-${24 - i} 19-3${i}-12`,
+  title: scenario.readme ? readmeTitles[i] : i === 1 ? "1v4 retake on B" : i === 0 ? "obby speedrun pb" : `${g} 2026-10-${24 - i} 19-3${i}-12`,
   game: g,
   createdAt: new Date(now - i * 1000 * 60 * 60 * (5 + i * 7)).toISOString(),
   duration: [60, 60, 45.4, 60, 30.2, 60, 18.7, 60, 60][i],
@@ -124,7 +132,7 @@ function status(): AppStatus {
       bufferBytes: buffered * 1.6 * 1024 * 1024,
       tracks: ["Game"],
       startedAt: started,
-      game: "Roblox",
+      game: liveGame,
       smartWaiting: scenario.waiting,
       paused: false,
       cpu: 1.4 + Math.random() * 0.6,
@@ -247,7 +255,7 @@ const handlers: Record<string, (...a: any[]) => unknown> = {
     jobs.splice(0, jobs.length, ...jobs.filter((j) => j.status === "running"));
     emit("jobs:changed", [...jobs]);
   },
-  SaveClip: () => setTimeout(() => emit("toast", { kind: "success", message: "Saved Roblox 2026-10-24 19-41-03" }), 300),
+  SaveClip: () => setTimeout(() => emit("toast", { kind: "success", message: `Saved ${liveGame} 2026-10-24 19-41-03` }), 300),
   AddBookmark: () => emit("toast", { kind: "info", message: "Bookmark added" }),
   PickFolder: () => "C:\\Users\\you\\Videos\\Snag",
   CopyClip: () => undefined,
@@ -301,7 +309,7 @@ const handlers: Record<string, (...a: any[]) => unknown> = {
     const d = new Date();
     const p = (n: number) => String(n).padStart(2, "0");
     const name = (s.fileTemplate || "{game} {date} {time}")
-      .replaceAll("{game}", "Roblox")
+      .replaceAll("{game}", liveGame)
       .replaceAll("{date}", `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`)
       .replaceAll("{time}", `${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`)
       .replaceAll("{length}", `${s.bufferSeconds}s`)
@@ -309,7 +317,7 @@ const handlers: Record<string, (...a: any[]) => unknown> = {
       .replaceAll("{month}", p(d.getMonth() + 1))
       .replaceAll("{day}", p(d.getDate()))
       .replace(/[<>:"/\\|?*]/g, "");
-    return (s.organizeByGame ? "Roblox\\" : "") + name + ".mp4";
+    return (s.organizeByGame ? liveGame + "\\" : "") + name + ".mp4";
   },
 };
 

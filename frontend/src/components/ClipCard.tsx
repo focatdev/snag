@@ -9,6 +9,7 @@ import waiting from "@/assets/waiting.jpg";
 const mockThumbs = [live, setup, paused, fern, waiting];
 import { aiReady, copyLink, nameWithAI, shrink, uploadClip } from "@/lib/actions";
 import { api, type Clip } from "@/lib/api";
+import { mockThumb } from "@/lib/mock";
 import { bytes, clock, cn, relDate } from "@/lib/format";
 import { mediaUrl, useStore } from "@/lib/store";
 import { CtxMenu } from "./ui/menu";
@@ -35,6 +36,8 @@ export function Thumb({ clip, scrub = true, badge = true, className }: { clip: C
     >
       {thumb ? (
         <img src={thumb} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+      ) : mock && mockThumb(clip) ? (
+        <img src={mockThumb(clip)!} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : mock ? (
         <div className="absolute inset-0" style={{ backgroundImage: `url(${mockThumbs[clip.id.charCodeAt(4) % mockThumbs.length]})`, backgroundSize: "220%", backgroundPosition: `${(clip.id.charCodeAt(4) * 37) % 100}% 50%` }} />
       ) : (

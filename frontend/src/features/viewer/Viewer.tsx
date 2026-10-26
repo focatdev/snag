@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { Tip } from "@/components/ui/tooltip";
 import { aiReady, copyLink, nameWithAI, shrink, transcribe, uploadClip } from "@/lib/actions";
 import { api, type TrackMix } from "@/lib/api";
+import { mockThumb } from "@/lib/mock";
 import { bytes, cn, fullDate, resLabel, timecode } from "@/lib/format";
 import { mediaUrl, useStore } from "@/lib/store";
 import { copyClip } from "@/components/ClipCard";
@@ -378,7 +379,7 @@ export function Viewer({ id }: { id: string }) {
 
         <div className="relative min-h-0 flex-1 bg-black">
           {mock ? (
-            <div className="absolute inset-0 m-auto aspect-video max-h-full max-w-full" style={{ backgroundImage: `url(${frost})`, backgroundSize: "cover", backgroundPosition: `${30 + (time / (duration || 1)) * 40}% 50%` }} />
+            <div className="absolute inset-0 m-auto aspect-video max-h-full max-w-full" style={{ backgroundImage: `url(${mockThumb(clip) ?? frost})`, backgroundSize: "cover", backgroundPosition: `${30 + (time / (duration || 1)) * 40}% 50%` }} />
           ) : (
             <video
               ref={(el) => {

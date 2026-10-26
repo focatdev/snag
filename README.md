@@ -1,167 +1,164 @@
-# Snag
+<p align="center">
+  <img src="docs/banner.jpg" alt="Snag" width="100%">
+</p>
 
-A small replay buffer and clip editor for Windows. It keeps the last minute of gameplay ready, in RAM or a hidden folder on disk, and only writes a clip when you press the hotkey. With a GPU encoder it sits well under 1% CPU while you play.
+<p align="center">
+  <a href="../../releases/latest"><b>Download</b></a>
+  &nbsp;&nbsp;/&nbsp;&nbsp;
+  <a href="#build-it-yourself">Build</a>
+  &nbsp;&nbsp;/&nbsp;&nbsp;
+  <a href="../../issues/new?template=bug_report.yml">Report a bug</a>
+</p>
 
-![Home](docs/home.jpg)
+<br>
+
+Snag keeps the last minute of your game ready and saves it when you press **F8**. It's made for PCs where Medal or ShadowPlay feel heavy: the GPU does the encoding, the buffer sits in RAM, and nothing touches your disk until you actually save something.
 
 | | |
-| --- | --- |
-| ![Library](docs/library.jpg) | ![Editor](docs/editor.jpg) |
+|---|---|
+| **Under 1% CPU** | with NVENC, AMF or Quick Sync doing the work |
+| **0 MB written** | while you play, until you press save |
+| **Local** | no account, no cloud, no telemetry |
 
-## Download
+<br>
 
-Grab `SnagSetup.exe` from the [latest release](../../releases/latest). It installs per user, no admin needed, and the first launch walks you through getting FFmpeg and testing your GPU.
+<img src="docs/editor.jpg" alt="Clip editor" width="100%">
 
-The builds aren't code signed yet, so Windows SmartScreen will say it "protected your PC". Click More info, then Run anyway. Some antivirus tools also flag new unsigned apps that use global hotkeys and screen capture. The source is all here if you'd rather build it yourself.
+## What it does
 
-## What talks to the internet
+**Capture.** Fullscreen games included, through Desktop Duplication straight into the GPU encoder. Game audio, mic and Discord can each get their own track, so you can mute your friends later and keep the game sound. Snag can also wait until a game is open before it starts.
 
-Only these four things, and each one can be switched off or simply not used:
+**Edit.** Trim, cut out the boring middle, merge clips, speed up, crop to 9:16 for Shorts, add motion blur, or squeeze a clip under Discord's 10 MB limit. Plain trims don't re-encode, so they take about a second.
 
-- **FFmpeg download**, from BtbN/FFmpeg-Builds on GitHub, when you press Download.
-- **Updates**, a check against this repo's GitHub releases a few times a day. On by default, off in Settings, About.
-- **Uploads**, to catbox.moe or your own ShareX uploader, when you upload a clip or turn on uploading new clips.
-- **AI titles and voice search**, straight to the provider you picked, only after you add your own key.
+**Share.** Every save can land on your clipboard as a file, ready for Ctrl+V in Discord. Uploads go to catbox.moe or any ShareX custom uploader (`.sxcu`), and the link is copied for you.
 
-## Updates
+**Stay small.** Old clips can be re-encoded to AV1, which usually halves them. Saving twice in a row extends one clip instead of making two that overlap. A mic track that stayed silent is dropped, and a storage limit clears the oldest clips first, never favourites.
 
-Snag compares the newest release tag on GitHub (like `v0.2.0`) with its own version. If it's newer, it downloads `Snag.exe` from that release and checks its SHA-256 against the hash GitHub publishes for the file (or `checksums.txt` as a fallback) before swapping it in. The running copy is renamed aside, which Windows allows, so the new version starts the next time Snag opens, or right away with Restart to update. The release notes show once after the update.
+<p align="center">
+  <img src="docs/popup.png" alt="Save popup" width="92%">
+</p>
 
-Builds made with plain `build.bat` have no repo stamped in and never update themselves.
+The popup is a plain Windows window, not something injected into the game, and it's hidden from capture so it never ends up in a clip.
 
-## Releasing
+<img src="docs/library.jpg" alt="Library" width="100%">
 
-Push a tag and the workflow in `.github/workflows/release.yml` does the rest: builds on Windows with the tag as the version and this repo as the update source, writes `checksums.txt`, and publishes `SnagSetup.exe`, `Snag.exe` and the checksums as a release with generated notes.
+## Hotkeys
+
+| | |
+|---|---|
+| <kbd>F8</kbd> | save the last minute |
+| <kbd>Shift</kbd> <kbd>F8</kbd> | save the last 15 seconds |
+| <kbd>Ctrl</kbd> <kbd>F8</kbd> | screenshot |
+| <kbd>Alt</kbd> <kbd>F8</kbd> | bookmark the moment |
+| <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>F8</kbd> | start or stop capturing |
+
+All of them can be changed. Press <kbd>?</kbd> in the app for the editor keys.
+
+## What goes online
+
+Only these, and each one can be turned off or just left unused:
+
+- **FFmpeg**, from [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds), when you click Download
+- **Updates**, a check against this repo's releases a few times a day
+- **Uploads**, when you upload a clip or turn on uploading new ones
+- **AI titles and voice search**, sent straight to the provider whose key you added
+
+## Installing
+
+Get `SnagSetup.exe` from the [latest release](../../releases/latest). It installs for your user only, no admin prompt. The first launch sets up FFmpeg, tests your GPU and shows the hotkeys.
+
+> [!NOTE]
+> The builds aren't code signed yet, so SmartScreen will say it protected your PC. Click **More info**, then **Run anyway**. Some antivirus apps are also wary of new unsigned programs that use global hotkeys and screen capture.
+
+Updates install themselves. Snag compares the newest release tag here with its own version, downloads the new `Snag.exe`, checks it against the SHA-256 GitHub publishes for it, and swaps it in on the next launch.
+
+## Build it yourself
+
+You need Go and Node.js.
+
+```
+build.bat          bin\Snag.exe and bin\SnagSetup.exe
+build.bat debug    bin\Snag-debug.exe, with a console for logs
+```
+
+Local builds don't update themselves. `npm run dev` inside `frontend` opens the UI in a browser with fake data (`?mock`).
+
+<details>
+<summary><b>Releasing</b></summary>
+
+<br>
+
+The first time, make an empty repo on GitHub and run `publish.bat https://github.com/you/snag.git`. After that, `publish.bat` on its own pushes whatever changed.
+
+Push a tag and GitHub Actions builds both exes, writes `checksums.txt` and publishes the release:
 
 ```
 git tag v0.2.0
 git push origin v0.2.0
 ```
 
-Edit the release notes on GitHub afterwards if you like, they are what people see in What's new.
+The release notes are what people see in What's new after updating.
 
-## Building
+</details>
 
-You need Go and Node.js. Then run:
+<details>
+<summary><b>How capture works</b></summary>
 
-```
-build.bat
-```
+<br>
 
-This installs the frontend packages, builds the UI, fetches the Go modules and produces two files:
+1. FFmpeg grabs the screen with `ddagrab`, so frames stay on the GPU, and encodes them with NVENC, AMF or Quick Sync.
+2. Game audio, mic and Discord are captured through WASAPI in Go and piped into FFmpeg, one track each. Silence is padded so audio stays in sync when nothing is playing.
+3. FFmpeg writes MPEG-TS with a keyframe every second. Snag splits it at keyframes and keeps the last N seconds in a ring buffer.
+4. Saving copies that buffer into an MP4 without re-encoding.
 
-- `bin\Snag.exe`, the app itself
-- `bin\SnagSetup.exe`, an installer that carries the app inside it. It lets you pick a drive (it shows free space on each), sets up shortcuts and start with Windows, can download FFmpeg, and registers an uninstaller in Windows settings that keeps your clips unless you say otherwise. The first build takes a few minutes because Go may download the 1.26 toolchain that Wails v3 needs.
+If the GPU path won't start, Snag falls back to copying frames through system memory, then to GDI. Closing the window destroys the webview, so the tray process idles on very little RAM.
 
-If something misbehaves, build with logs:
+</details>
 
-```
-build.bat debug
-```
+<details>
+<summary><b>Project layout</b></summary>
 
-`bin\Snag-debug.exe` opens with a console that shows what the app is doing.
-
-## First run
-
-Snag needs FFmpeg. The setup screen offers to download a build from BtbN/FFmpeg-Builds (checked against its published SHA-256) into `%LOCALAPPDATA%\Snag\bin`, or you can point it at an `ffmpeg.exe` you already have. On first launch it test-encodes a few frames with every encoder to see which ones work on your GPU, then caches the result.
-
-Default hotkeys:
-
-| Action | Key |
-| --- | --- |
-| Save clip | F8 |
-| Save short clip (last 15 seconds) | Shift+F8 |
-| Screenshot | Ctrl+F8 |
-| Add bookmark | Alt+F8 |
-| Start or stop the buffer | Ctrl+Alt+F8 |
-
-Clips go to `Videos\Snag` and exports to `Videos\Snag\Exports`. Both folders, per-game subfolders and the file name pattern (`{game} {date} {time}` by default, also `{length}`) are in Settings, Storage.
-
-Finished exports are copied to the clipboard, so Ctrl+V in Discord attaches the file. Any clip can be copied the same way from its right-click menu or the clip view.
-
-Screenshots go to `Videos\Snag\Screenshots` as PNG and are copied to the clipboard too, unless you turn that off.
-
-When a clip saves, a small popup slides in at a corner of the screen, styled like the app (it carries Instrument Sans inside the exe, loaded privately so nothing gets installed). It is a plain Windows window, not injected into the game, and it is excluded from capture so it never shows up in clips. Uploads show their progress in the same popup.
-
-## Saving space
-
-- **Shrink.** Right-click a clip, select a few, or use the clip view's menu to re-encode it to AV1 (HEVC on GPUs without AV1, the CPU encoder as a last resort). Clips usually end up about half the size. A result that saves less than 10% is thrown away and the original stays. Settings, Storage can do this on its own for clips older than 3, 7, 14 or 30 days. It only runs while no game has focus and nothing else is processing.
-- **No repeated footage.** Press save twice within the clip length and the second save extends the first clip instead of writing a second one that repeats the same seconds.
-- **Lean audio.** The mic is recorded in mono at 64 kbps, and a mic track that stayed silent for the whole clip is left out.
-- **Trim in place.** In the clip view, turn on Replace original before saving a trim. The original goes to the recycle bin.
-
-## Editing
-
-The clip view trims with Set start and Set end (I and O). Cut out (X) removes the marked part and keeps the rest, so you can drop several dead moments from one clip. Removed parts show hatched on the timeline. Click the small x above one to put it back. A clip with cuts gets re-encoded on export.
-
-Select two or more clips in the library and pick Merge to join them into one video in the order you set. Different resolutions and frame rates are scaled to match the first clip.
-
-## Sharing
-
-Right-click a clip (or use the clip view's menu) and pick Upload and copy link. When it finishes, the link is on your clipboard and the popup shows it. Settings, Sharing can upload every new clip on its own and recycle the local file once the link is copied (favorites are always kept).
-
-Catbox is built in: free, 200 MB per file, 20 MB for GIFs, and an optional userhash puts uploads in your account so you can delete them.
-
-Any other host works through a ShareX custom uploader. Import the .sxcu file, or paste its JSON, and pick it under Upload to. Snag supports multipart and binary uploads with Parameters, Headers and Arguments, and reads the link back with `{json:...}`, `{xml:...}`, `{regex:...}`, `{header:...}`, `{response}` and `{responseurl}`, plus `{filename}`, `{random:...}` and `{base64:...}`. Old `$json:...$` style files are converted on import. Two things differ from ShareX because Snag uploads without stopping to ask: `{select:...}` uses its first choice and `{inputbox}` uses its default text. A DeletionURL, if the uploader has one, shows up as Copy delete link on the clip. Imported uploaders live in `%LOCALAPPDATA%\Snag\uploaders`, including any API keys in their headers, the same way ShareX keeps them.
-
-## Discord on its own track
-
-With game audio on, Settings, Audio has a switch that records Discord separately from everything else, so a clip has Game, Voice and Mic tracks you can mute one by one. It uses per-process loopback, which only exists on Windows 11 (build 22000 or newer). On Windows 10, or if Discord is closed when capture starts, Snag records all desktop audio on one track as before and says so in the status bar.
-
-## AI (optional)
-
-Settings, AI takes a key from Groq, Gemini, OpenAI or Anthropic. The key is encrypted with Windows DPAPI, so only your Windows account can read it, and requests go straight from your PC to that provider.
-
-- **Name new clips.** Three frames from each new clip are sent to the model, which returns a short title and a few tags. You can also do it for a single clip from its menu.
-- **Search by voice.** The mic or Discord track is transcribed (Groq and OpenAI use their speech-to-text endpoints, Gemini reads the audio directly) and the text becomes searchable in the library. Claude has no audio input, so this switch is off for it.
-
-The default models are listed in `internal/ai/ai.go` and can be changed in Settings.
-
-## How capture works
-
-1. FFmpeg grabs the screen with `ddagrab` (Desktop Duplication), so frames stay on the GPU, and encodes them with NVENC, AMF or Quick Sync.
-2. Game audio (WASAPI loopback) and the microphone are captured in Go and fed to FFmpeg through named pipes, one track each. Silence is padded so audio stays locked to the clock when nothing is playing.
-3. FFmpeg writes MPEG-TS to stdout with a keyframe every second. Snag splits it at keyframes and keeps only the last N seconds in a ring buffer.
-4. Saving dumps that buffer and remuxes it to MP4 without re-encoding, so it takes about a second.
-
-If the GPU path fails to start, Snag falls back to copying frames through system memory, then to GDI capture. The status bar shows which one is active.
-
-Closing the window destroys the webview, so idle memory drops to the Go process and the buffer. The tray icon brings it back.
-
-## Reporting problems
-
-Settings, About, Copy diagnostics puts versions, GPU and driver, encoder test results, capture state and the last log lines on your clipboard, never your keys. The full log is `%LOCALAPPDATA%\Snag\snag.log`, with the previous one kept as `snag.old.log`. The bug template on GitHub asks for the diagnostics.
-
-## Project layout
+<br>
 
 ```
-main.go, core.go, service.go   app setup, tray, hotkeys, the service the UI calls
-updater.go, diagnostics.go     self update from github releases, bug report text
-internal/recorder              capture pipeline, fallbacks, saving, game-focus mode
-internal/tsbuf                 MPEG-TS parser and keyframe ring buffer (has a test)
+main.go, core.go, service.go   app setup, tray, hotkeys, everything the UI calls
+updater.go, diagnostics.go     self update from GitHub releases, bug report text
+internal/recorder              capture pipeline, fallbacks, saving
+internal/tsbuf                 MPEG-TS parser and keyframe ring buffer
 internal/wasapi                WASAPI capture through raw COM calls
-internal/winapi                Win32 helpers: named pipes, clipboard, save notice, recycle bin, DPAPI, process list
-internal/ai                    clip titles and transcripts through Groq, Gemini, OpenAI or Anthropic
-internal/ffmpeg                locate, download, probe encoders, progress parsing
-internal/library               clip index, thumbnails, waveforms, storage budget
-internal/jobs                  job queue: trim, cuts, fit to size, blur, 9:16, speed, GIF, shrink, merge
-internal/mediaserver           loopback HTTP server so video seeking uses range requests
-frontend/                      React, Tailwind v4, Radix primitives, Phosphor icons
-build/brand                    logo as SVG, transparent PNG and ICO
-build/sounds                   save, bookmark and error sounds (synthesised, yours to replace)
+internal/winapi                Win32: pipes, clipboard, popup, recycle bin, DPAPI
+internal/ffmpeg                find, download and test FFmpeg
+internal/jobs                  exports, cuts, merges, shrinking
+internal/library               clip index, thumbnails, waveforms, storage limit
+internal/mediaserver           local server so the player can seek
+internal/upload                catbox and ShareX custom uploaders
+internal/ai                    titles and transcripts
+installer/                     SnagSetup.exe
+frontend/                      React, Tailwind, Radix, Phosphor icons
 ```
 
-The UI talks to Go through `Call.ByName("main.SnagService.<Method>")`, so there is no generated bindings step. Running `npm run dev` inside `frontend` opens the UI in a browser with fake data.
+</details>
 
-## Known limits
+<details>
+<summary><b>Known limits</b></summary>
 
-- Windows 10 and 11 only.
-- The player in the clip view plays the first audio track. Track mutes and volumes apply to exports.
-- Motion blur blends frames, so it is much stronger on clips recorded at 120 or 144 fps than at 60.
-- Trimming without re-encoding snaps to the nearest keyframe, about one second.
-- Snag records a whole display, not a single window. Window capture in FFmpeg goes through GDI, which is slow, misses most games that use the GPU and shows black for fullscreen ones. Doing it properly needs Windows Graphics Capture, which is a larger piece of work.
-- A clip that is open in the clip view cannot be shrunk or replaced at the same moment, because Windows will not swap a file another program is reading. The clip view lets go of the file while it trims in place.
+<br>
 
-## License
+- Windows 10 and 11 only for now. Linux and macOS are planned.
+- Snag records a whole display. Proper window capture needs Windows Graphics Capture, which isn't in yet.
+- Discord on its own track needs Windows 11.
+- The editor plays the first audio track. Track mutes apply to exports.
+- Motion blur blends frames, so it's much stronger on 120 or 144 fps recordings.
+- Trims without re-encoding snap to the nearest keyframe, about a second.
 
-MIT, see `LICENSE`. FFmpeg is downloaded separately and keeps its own license. The popup font is Instrument Sans under the SIL Open Font License, included in `internal/winapi/fonts`.
+</details>
+
+## Bugs
+
+Settings, About, **Copy diagnostics** gives you versions, GPU and driver, encoder results and the last log lines, never your keys. Paste that into a [bug report](../../issues/new?template=bug_report.yml). The full log is in `%LOCALAPPDATA%\Snag\snag.log`.
+
+<br>
+
+<sub>MIT licensed. FFmpeg is downloaded separately under its own license. The popup font is Instrument Sans (SIL OFL). The game footage in the screenshots is from SuperTuxKart, Red Eclipse, osu!, Luanti and OpenArena, all free and open source.</sub>
+
+<sub>This repository includes code and docs written with AI help, alongside code written by hand. All of it gets reviewed before it ships.</sub>
