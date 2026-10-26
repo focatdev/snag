@@ -84,10 +84,12 @@ function Notes({ text }: { text: string }) {
 
 export function WhatsNew() {
   const w = useStore((s) => s.boot?.whatsNew);
-  const [open, setOpen] = useState(!!w);
+  // mounts before bootstrap arrives, so open can't be seeded from w
+  const [closed, setClosed] = useState(false);
   if (!w) return null;
+  const setOpen = (o: boolean) => setClosed(!o);
   return (
-    <Dialog open={open} onOpenChange={setOpen} title={`What's new in ${w.version}`} className="w-[520px]">
+    <Dialog open={!closed} onOpenChange={setOpen} title={`What's new in ${w.version}`} className="w-[520px]">
       <div className="mt-2">{w.notes.trim() ? <Notes text={w.notes} /> : <p className="text-sm text-muted">Fixes and small improvements.</p>}</div>
       <div className="mt-5 flex justify-end">
         <Button variant="primary" onClick={() => setOpen(false)}>
