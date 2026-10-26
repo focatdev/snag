@@ -97,6 +97,26 @@ func (c *Core) setUpdate(fn func(*UpdateState)) {
 	c.emit("update", c.updateState())
 }
 
+const uninstallKey = `Software\Microsoft\Windows\CurrentVersion\Uninstall\Snag`
+
+// the installer only writes the version once, so installed apps would show it forever after a self update
+func syncInstalledVersion() {
+	loc, err := winapi.RegReadString(uninstallKey, "InstallLocation")
+	if err != nil || loc == "" {
+		return
+	}
+	exe, err := os.Executable()
+	if err != nil || !strings.EqualFold(filepath.Clean(filepath.Dir(exe)), filepath.Clean(loc)) {
+		return
+	}
+	if v, _ := winapi.RegReadString(uninstallKey, "DisplayVersion"); v == appVersion {
+		return
+	}
+	if err := winapi.RegWrite(uninstallKey, winapi.RegValue{Name: "DisplayVersion", Str: appVersion}); err != nil {
+		slog.Warn("update installed version", "err", err)
+	}
+}
+
 func cleanupOldExe() {
 	if exe, err := os.Executable(); err == nil {
 		os.Remove(exe + ".old")

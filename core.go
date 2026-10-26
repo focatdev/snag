@@ -66,6 +66,7 @@ func newCore(dataDir string) (*Core, error) {
 	}
 	c := &Core{dataDir: dataDir, store: store, aiQueue: make(chan string, 256)}
 	cleanupOldExe()
+	syncInstalledVersion()
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 	c.loadToolCache()
 
