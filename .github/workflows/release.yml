@@ -1,0 +1,46 @@
+name: release
+
+# push a tag like v0.2.0 and this builds, hashes and publishes Snag.exe and SnagSetup.exe
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build
+        shell: cmd
+        env:
+          SNAG_REPO: ${{ github.repository }}
+        run: |
+          set SNAG_VERSION=%GITHUB_REF_NAME:~1%
+          call build.bat
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-FileHash bin/Snag.exe, bin/SnagSetup.exe -Algorithm SHA256 |
+            ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) } |
+            Set-Content -Encoding ascii bin/checksums.txt
+          Get-Content bin/checksums.txt
+
+      - name: Publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create $env:GITHUB_REF_NAME bin/SnagSetup.exe bin/Snag.exe bin/checksums.txt --title "Snag $($env:GITHUB_REF_NAME.TrimStart('v'))" --generate-notes

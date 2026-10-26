@@ -1,0 +1,10 @@
+bin/
+frontend/node_modules/
+frontend/dist/
+*.syso
+installer/ui/
+installer/payload/
+_github/
+*.log
+.DS_Store
+Thumbs.db

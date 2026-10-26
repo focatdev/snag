@@ -1,0 +1,27 @@
+name: Bug report
+description: Something broke or looks wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead. Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: In Snag, open Settings, About, press Copy diagnostics and paste here. It has versions, GPU and encoder results, never your keys.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: again
+    attributes:
+      label: Does it happen every time?
+      options:
+        - Every time
+        - Sometimes
+        - Once so far

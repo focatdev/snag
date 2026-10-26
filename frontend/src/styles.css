@@ -1,0 +1,156 @@
+@import "tailwindcss";
+@import "@fontsource-variable/instrument-sans/wdth.css";
+@import "@fontsource-variable/mona-sans/wdth.css";
+
+@theme {
+  --font-sans: "Instrument Sans Variable", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Mona Sans Variable", "Instrument Sans Variable", "Segoe UI", sans-serif;
+
+  --color-canvas: #131416;
+  --color-raised: #1a1c1f;
+  --color-well: #161719;
+  --color-hover: #222428;
+  --color-line: #2a2d31;
+  --color-line-soft: #212327;
+  --color-fg: #e8ebef;
+  --color-muted: #8b9199;
+  --color-faint: #7a8089;
+  --color-frost: #dde4ee;
+  --color-frost-hi: #eef2f7;
+  --color-frost-ink: #151a21;
+  --color-frost-sub: #4f5b6b;
+  --color-live: #ff5f57;
+  --color-ok: #86d4ad;
+  --color-warn: #e9c46a;
+  --color-bad: #f0857c;
+
+  --radius-ctl: 6px;
+  --radius-card: 10px;
+
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 24px;
+  --text-3xl: 36px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    overflow: hidden;
+  }
+  ::selection {
+    background: #3a4656;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-frost);
+    outline-offset: 2px;
+  }
+  input,
+  textarea {
+    user-select: text;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2c2f34;
+    border: 3px solid var(--color-canvas);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a3e44;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  img {
+    -webkit-user-drag: none;
+  }
+}
+
+@utility display {
+  font-family: var(--font-display);
+  font-stretch: 112%;
+  font-weight: 700;
+}
+
+@utility drag {
+  --wails-draggable: drag;
+}
+
+@utility no-drag {
+  --wails-draggable: no-drag;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.live-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+.anim-toast {
+  animation: toast-in 160ms ease-out;
+}
+
+.anim-fade {
+  animation: fade-in 120ms ease-out;
+}
+
+.anim-pop {
+  animation: pop-in 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
