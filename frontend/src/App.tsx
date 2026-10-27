@@ -6,6 +6,7 @@ import { Shortcuts, WhatsNew } from "./components/Overlays";
 import { Toasts } from "./components/Toasts";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { Home } from "./features/home/Home";
+import { FolderDialog } from "./features/library/Folders";
 import { Library } from "./features/library/Library";
 import { Onboarding } from "./features/onboarding/Onboarding";
 import { Settings } from "./features/settings/Settings";
@@ -50,7 +51,7 @@ export function App() {
             ) : !ready ? null : view.name === "home" ? (
               <Home />
             ) : view.name === "library" ? (
-              <Library key={`${view.kind ?? "clips"}-${view.game ?? ""}`} kind={view.kind} game={view.game} />
+              <Library key={`${view.kind ?? "clips"}-${view.game ?? ""}-${view.folder ?? ""}`} kind={view.kind} game={view.game} folder={view.folder} />
             ) : view.name === "settings" ? (
               <Settings />
             ) : (
@@ -63,6 +64,7 @@ export function App() {
         <Toasts />
         <Shortcuts />
         <WhatsNew />
+        <FolderDialog />
       </div>
     </TooltipProvider>
   );

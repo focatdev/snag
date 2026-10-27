@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowLineLeft, ArrowLineRight, ArrowsInSimple, CaretLeft, Keyboard, CircleNotch, CloudArrowUp, LinkSimple, Copy, CaretRight, DotsThree, FolderOpen, Microphone, Pause, Play, Repeat, Scissors, Sparkle, SpeakerHigh, SpeakerSlash, Star, TextAlignLeft, Trash } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowLineLeft, ArrowLineRight, ArrowsInSimple, CaretLeft, Keyboard, CircleNotch, CloudArrowUp, LinkSimple, Copy, CaretRight, DotsThree, FolderOpen, FolderSimple, Microphone, Pause, Play, Repeat, Scissors, Sparkle, SpeakerHigh, SpeakerSlash, Star, TextAlignLeft, Trash } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import frost from "@/assets/live.jpg";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { mockThumb } from "@/lib/mock";
 import { bytes, cn, fullDate, resLabel, timecode } from "@/lib/format";
 import { mediaUrl, useStore } from "@/lib/store";
 import { copyClip } from "@/components/ClipCard";
+import { folderMenu } from "@/features/library/Folders";
 import { ExportPanel, defaultDraft, needsEncode, type Draft } from "./ExportPanel";
 import { Timeline } from "./Timeline";
 
@@ -70,6 +71,7 @@ export function Viewer({ id }: { id: string }) {
   const patch = useStore((s) => s.patchClip);
   const toast = useStore((s) => s.toast);
   const jobs = useStore((s) => s.jobs);
+  const folders = useStore((s) => s.folders);
   const video = useRef<HTMLVideoElement>(null);
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
   const [time, setTime] = useState(0);
@@ -363,6 +365,7 @@ export function Viewer({ id }: { id: string }) {
               </Button>
             }
             items={[
+              { label: "Move to folder", icon: <FolderSimple size={15} />, sub: folderMenu(folders, [clip.id], [clip.folder]) },
               { label: "Upload and copy link", icon: <CloudArrowUp size={15} />, onSelect: () => uploadClip(clip.id) },
               ...(clip.link ? [{ label: "Copy link", icon: <LinkSimple size={15} />, onSelect: () => copyLink(clip.link!) }] : []),
         ...(clip.deleteLink ? [{ label: "Copy delete link", icon: <LinkSimple size={15} />, onSelect: () => copyLink(clip.deleteLink!) }] : []),

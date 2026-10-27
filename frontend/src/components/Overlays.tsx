@@ -38,6 +38,11 @@ export function Shortcuts() {
           <Line label="Start or stop" keys={<Kbd keys={hk?.toggleBuffer ?? ""} />} />
           <p className="mb-1 mt-4 text-xs text-faint">In Snag</p>
           <Line label="This sheet" keys={<Kbd keys="?" />} />
+          <p className="mb-1 mt-4 text-xs text-faint">Library</p>
+          <Line label="Select a clip" keys={<Kbd keys="Ctrl+Click" />} />
+          <Line label="Select a range" keys={<Kbd keys="Shift+Click" />} />
+          <Line label="Select all" keys={<Kbd keys="Ctrl+A" />} />
+          <Line label="Clear selection" keys={<Kbd keys="Esc" />} />
         </div>
         <div>
           <p className="mb-1 text-xs text-faint">Clip editor</p>

@@ -71,7 +71,7 @@ func (c *Core) jobDone(j jobs.Job) {
 			}
 			if err := moveFile(j.Output, dest); err != nil {
 				c.toast("error", "Trimmed copy kept in Exports: "+err.Error())
-				c.lib.Add(library.NewClip{Path: j.Output, Game: orig.Game, Export: true})
+				c.lib.Add(library.NewClip{Path: j.Output, Game: orig.Game, Export: true, Folder: orig.Folder})
 				return
 			}
 			c.lib.ReplaceFile(orig.ID, dest)
@@ -79,7 +79,8 @@ func (c *Core) jobDone(j jobs.Job) {
 			c.toast("success", fmt.Sprintf("Original replaced, %s smaller", humanBytes(orig.Size-j.Size)))
 			return
 		}
-		c.lib.Add(library.NewClip{Path: j.Output, Game: orig.Game, Export: true})
+		// exports land next to their source clip
+		c.lib.Add(library.NewClip{Path: j.Output, Game: orig.Game, Export: true, Folder: orig.Folder})
 		if s.CopyExports {
 			if err := winapi.CopyFiles(j.Output); err == nil {
 				c.toast("success", "Export copied, ready to paste")
@@ -87,7 +88,7 @@ func (c *Core) jobDone(j jobs.Job) {
 		}
 	case "merge":
 		first, _ := c.lib.Get(j.ClipID)
-		c.lib.Add(library.NewClip{Path: j.Output, Game: first.Game, Export: true})
+		c.lib.Add(library.NewClip{Path: j.Output, Game: first.Game, Export: true, Folder: first.Folder})
 		if s.CopyExports {
 			winapi.CopyFiles(j.Output)
 		}

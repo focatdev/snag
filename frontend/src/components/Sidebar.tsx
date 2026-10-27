@@ -1,10 +1,61 @@
-import { ArrowClockwise, Export, FilmStrip, GearSix, House, Star } from "@phosphor-icons/react";
+import { ArrowClockwise, Export, FilmStrip, FolderSimple, FolderSimplePlus, GearSix, House, PencilSimple, Plus, Star, Trash } from "@phosphor-icons/react";
+import { CLIP_DRAG, dragIds, moveToFolder, openFolderDialog } from "@/features/library/Folders";
 import { sections } from "@/features/settings/Settings";
-import { useMemo, type ReactNode } from "react";
-import { api } from "@/lib/api";
+import { useMemo, useState, type ButtonHTMLAttributes, type DragEvent, type ReactNode } from "react";
+import { api, type Folder } from "@/lib/api";
 import { bytes, cn } from "@/lib/format";
 import { useStore, type LibraryKind } from "@/lib/store";
+import { CtxMenu } from "./ui/menu";
 import { Switch } from "./ui/switch";
+import { Tip } from "./ui/tooltip";
+
+// chromium hides drag data until drop, only the types are readable on hover
+const draggingClips = (e: DragEvent) => e.dataTransfer.types.includes(CLIP_DRAG);
+
+function DropRow({ children, onDropIds, className, ...rest }: { children: ReactNode; onDropIds: (ids: string[]) => void; className: string } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className">) {
+  const [over, setOver] = useState(false);
+  return (
+    <button
+      {...rest}
+      className={cn(className, over && "bg-hover text-fg ring-1 ring-inset ring-frost/50")}
+      onDragOver={(e) => {
+        if (!draggingClips(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        setOver(false);
+        const ids = dragIds(e);
+        if (!ids?.length) return;
+        e.preventDefault();
+        onDropIds(ids);
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+const rowClass = (active: boolean) => cn("flex h-8 w-full items-center gap-2.5 rounded-[6px] px-2.5 text-sm transition-colors", active ? "bg-hover text-fg" : "text-muted hover:bg-hover/60 hover:text-fg");
+
+function FolderRow({ folder, count, active, onOpen }: { folder: Folder; count: number; active: boolean; onOpen: () => void }) {
+  return (
+    <CtxMenu
+      items={[
+        { label: "Rename", icon: <PencilSimple size={15} />, onSelect: () => openFolderDialog({ mode: "rename", folder }) },
+        { label: "Delete folder", icon: <Trash size={15} />, danger: true, onSelect: () => openFolderDialog({ mode: "delete", folder }) },
+      ]}
+    >
+      <DropRow aria-current={active ? "page" : undefined} onClick={onOpen} onDropIds={(ids) => moveToFolder(ids, folder)} className={rowClass(active)}>
+        <FolderSimple size={17} weight={active ? "fill" : "regular"} className="shrink-0" />
+        <span className="flex-1 truncate text-left">{folder.name}</span>
+        {count > 0 && <span className="text-xs text-faint">{count}</span>}
+      </DropRow>
+    </CtxMenu>
+  );
+}
 
 function NavItem({ label, icon, active, count, onClick }: { label: string; icon: (active: boolean) => ReactNode; active: boolean; count?: number; onClick: () => void }) {
   return (
@@ -24,6 +75,7 @@ export function Sidebar() {
   const view = useStore((s) => s.view);
   const go = useStore((s) => s.go);
   const clips = useStore((s) => s.clips);
+  const folders = useStore((s) => s.folders);
   const status = useStore((s) => s.status);
   const settingsActive = useStore((s) => s.settingsActive);
   const update = useStore((s) => s.update);
@@ -33,10 +85,12 @@ export function Sidebar() {
 
   const counts = useMemo(() => {
     const games = new Map<string, number>();
+    const inFolder = new Map<string, number>();
     let own = 0;
     let exports = 0;
     let favs = 0;
     for (const c of clips) {
+      if (c.folder) inFolder.set(c.folder, (inFolder.get(c.folder) ?? 0) + 1);
       if (c.export) exports++;
       else {
         own++;
@@ -45,11 +99,12 @@ export function Sidebar() {
       }
       if (c.favorite) favs++;
     }
-    return { own, exports, favs, games: [...games.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7) };
+    return { own, exports, favs, inFolder, games: [...games.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7) };
   }, [clips]);
 
   const lib = (kind: LibraryKind, game?: string) => go({ name: "library", kind, game });
-  const isLib = (kind: LibraryKind, game?: string) => view.name === "library" && (view.kind ?? "clips") === kind && (view.game ?? "") === (game ?? "");
+  const isLib = (kind: LibraryKind, game?: string) => view.name === "library" && !view.folder && (view.kind ?? "clips") === kind && (view.game ?? "") === (game ?? "");
+  const newFolder = (ids?: string[]) => openFolderDialog({ mode: "new", ids });
   const usage = status?.usage;
   const limit = usage?.budgetBytes || 0;
   const pct = usage ? Math.min(100, (usage.usedBytes / (limit || usage.usedBytes + usage.freeBytes || 1)) * 100) : 0;
@@ -81,28 +136,50 @@ export function Sidebar() {
             ))}
           </div>
         </div>
-      ) : counts.games.length > 0 ? (
-        <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
-          <p className="mb-1 px-2.5 text-xs text-faint">Games</p>
-          <div className="space-y-0.5">
-            {counts.games.map(([g, n]) => (
-              <button
-                key={g}
-                onClick={() => lib("clips", g)}
-                className={cn(
-                  "flex h-8 w-full items-center gap-2.5 rounded-[6px] px-2.5 text-sm transition-colors",
-                  isLib("clips", g) ? "bg-hover text-fg" : "text-muted hover:bg-hover/60 hover:text-fg",
-                )}
-              >
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-[5px] bg-raised text-[10px] font-semibold text-fg ring-1 ring-line">{g.slice(0, 1).toUpperCase()}</span>
-                <span className="flex-1 truncate text-left">{g}</span>
-                <span className="text-xs text-faint">{n}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       ) : (
-        <div className="flex-1" />
+        <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+          <div className="mb-1 flex items-center justify-between pl-2.5 pr-1">
+            <p className="text-xs text-faint">Folders</p>
+            {folders.length > 0 && (
+              <Tip label="New folder">
+                <button aria-label="New folder" onClick={() => newFolder()} className="grid h-5 w-5 place-items-center rounded-[4px] text-faint hover:bg-hover hover:text-fg">
+                  <Plus size={12} weight="bold" />
+                </button>
+              </Tip>
+            )}
+          </div>
+          <div className="space-y-0.5">
+            {folders.map((f) => (
+              <FolderRow
+                key={f.id}
+                folder={f}
+                count={counts.inFolder.get(f.id) ?? 0}
+                active={view.name === "library" && view.folder === f.id}
+                onOpen={() => go({ name: "library", kind: "all", folder: f.id })}
+              />
+            ))}
+            {folders.length === 0 && (
+              <DropRow onClick={() => newFolder()} onDropIds={(ids) => newFolder(ids)} className={rowClass(false)}>
+                <FolderSimplePlus size={17} className="shrink-0" />
+                <span className="flex-1 truncate text-left">New folder</span>
+              </DropRow>
+            )}
+          </div>
+          {counts.games.length > 0 && (
+            <>
+              <p className="mb-1 mt-5 px-2.5 text-xs text-faint">Games</p>
+              <div className="space-y-0.5">
+                {counts.games.map(([g, n]) => (
+                  <button key={g} onClick={() => lib("clips", g)} className={rowClass(isLib("clips", g))}>
+                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-[5px] bg-raised text-[10px] font-semibold text-fg ring-1 ring-line">{g.slice(0, 1).toUpperCase()}</span>
+                    <span className="flex-1 truncate text-left">{g}</span>
+                    <span className="text-xs text-faint">{n}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       )}
 
       <div className="mt-3 space-y-2">

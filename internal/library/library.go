@@ -49,27 +49,31 @@ type Clip struct {
 	Transcript string    `json:"transcript"`
 	Link       string    `json:"link,omitempty"`
 	DeleteLink string    `json:"deleteLink,omitempty"`
+	Folder     string    `json:"folder,omitempty"`
 }
 
 type Library struct {
-	mu       sync.Mutex
-	dataDir  string
-	path     string
-	clips    map[string]*Clip
-	tools    func() ffmpeg.Tools
-	onChange func()
-	work     chan string
-	saveT    *time.Timer
+	mu          sync.Mutex
+	dataDir     string
+	path        string
+	foldersPath string
+	clips       map[string]*Clip
+	folders     []Folder
+	tools       func() ffmpeg.Tools
+	onChange    func()
+	work        chan string
+	saveT       *time.Timer
 }
 
 func Open(dataDir string, tools func() ffmpeg.Tools, onChange func()) *Library {
 	l := &Library{
-		dataDir:  dataDir,
-		path:     filepath.Join(dataDir, "library.json"),
-		clips:    map[string]*Clip{},
-		tools:    tools,
-		onChange: onChange,
-		work:     make(chan string, 4096),
+		dataDir:     dataDir,
+		path:        filepath.Join(dataDir, "library.json"),
+		foldersPath: filepath.Join(dataDir, "folders.json"),
+		clips:       map[string]*Clip{},
+		tools:       tools,
+		onChange:    onChange,
+		work:        make(chan string, 4096),
 	}
 	if b, err := os.ReadFile(l.path); err == nil {
 		var list []*Clip
@@ -79,6 +83,7 @@ func Open(dataDir string, tools func() ffmpeg.Tools, onChange func()) *Library {
 			}
 		}
 	}
+	l.loadFolders()
 	os.MkdirAll(l.ThumbDir(), 0o755)
 	go l.worker()
 	return l
@@ -151,6 +156,7 @@ type NewClip struct {
 	Markers []float64
 	Tracks  []string
 	Export  bool
+	Folder  string
 }
 
 func (l *Library) Add(n NewClip) Clip {
@@ -165,6 +171,7 @@ func (l *Library) Add(n NewClip) Clip {
 		Tracks:    n.Tracks,
 		Export:    n.Export,
 		Tags:      []string{},
+		Folder:    n.Folder,
 	}
 	if st != nil {
 		c.Size = st.Size()
@@ -258,6 +265,7 @@ type Patch struct {
 	Favorite *bool     `json:"favorite"`
 	Tags     *[]string `json:"tags"`
 	Game     *string   `json:"game"`
+	Folder   *string   `json:"folder"`
 }
 
 func (l *Library) Update(id string, p Patch) (Clip, error) {
@@ -267,6 +275,42 @@ func (l *Library) Update(id string, p Patch) (Clip, error) {
 		l.mu.Unlock()
 		return Clip{}, errors.New("clip not found")
 	}
+	if err := l.checkPatchLocked(p); err != nil {
+		l.mu.Unlock()
+		return Clip{}, err
+	}
+	applyPatch(c, p)
+	out := *c
+	l.mu.Unlock()
+	l.changed()
+	return out, nil
+}
+
+// one save and one ui refresh for the whole selection
+func (l *Library) UpdateMany(ids []string, p Patch) error {
+	l.mu.Lock()
+	if err := l.checkPatchLocked(p); err != nil {
+		l.mu.Unlock()
+		return err
+	}
+	for _, id := range ids {
+		if c, ok := l.clips[id]; ok {
+			applyPatch(c, p)
+		}
+	}
+	l.mu.Unlock()
+	l.changed()
+	return nil
+}
+
+func (l *Library) checkPatchLocked(p Patch) error {
+	if p.Folder != nil && *p.Folder != "" && l.folderIndexLocked(*p.Folder) < 0 {
+		return errors.New("that folder no longer exists")
+	}
+	return nil
+}
+
+func applyPatch(c *Clip, p Patch) {
 	if p.Title != nil {
 		if t := strings.TrimSpace(*p.Title); t != "" {
 			c.Title = t
@@ -281,10 +325,9 @@ func (l *Library) Update(id string, p Patch) (Clip, error) {
 	if p.Game != nil {
 		c.Game = *p.Game
 	}
-	out := *c
-	l.mu.Unlock()
-	l.changed()
-	return out, nil
+	if p.Folder != nil {
+		c.Folder = *p.Folder
+	}
 }
 
 func (l *Library) dropFiles(id string) {

@@ -46,6 +46,7 @@ type Bootstrap struct {
 	WhatsNew *WhatsNew        `json:"whatsNew"`
 	Features ffmpeg.Features  `json:"features"`
 	Clips    []library.Clip   `json:"clips"`
+	Folders  []library.Folder `json:"folders"`
 	Jobs     []jobs.Job       `json:"jobs"`
 }
 
@@ -64,6 +65,7 @@ func (s *SnagService) GetBootstrap() Bootstrap {
 		WhatsNew: c.whatsNew(),
 		Features: c.Features(),
 		Clips:    c.lib.List(),
+		Folders:  c.lib.Folders(),
 		Jobs:     c.jobs.List(),
 	}
 }
@@ -158,7 +160,31 @@ func (s *SnagService) UpdateClip(id string, p library.Patch) (library.Clip, erro
 	return s.c.lib.Update(id, p)
 }
 
+func (s *SnagService) UpdateClips(ids []string, p library.Patch) error {
+	return s.c.lib.UpdateMany(ids, p)
+}
+
 func (s *SnagService) DeleteClips(ids []string) error { return s.c.lib.Delete(ids) }
+
+func (s *SnagService) ListFolders() []library.Folder { return s.c.lib.Folders() }
+
+func (s *SnagService) CreateFolder(name string) (library.Folder, error) {
+	f, err := s.c.lib.CreateFolder(name)
+	s.c.emit("folders:changed", s.c.lib.Folders())
+	return f, err
+}
+
+func (s *SnagService) RenameFolder(id, name string) (library.Folder, error) {
+	f, err := s.c.lib.RenameFolder(id, name)
+	s.c.emit("folders:changed", s.c.lib.Folders())
+	return f, err
+}
+
+func (s *SnagService) DeleteFolder(id string) error {
+	err := s.c.lib.DeleteFolder(id)
+	s.c.emit("folders:changed", s.c.lib.Folders())
+	return err
+}
 
 func (s *SnagService) Rescan() {
 	cfg := s.c.store.Get()

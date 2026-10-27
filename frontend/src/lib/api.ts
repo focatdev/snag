@@ -124,7 +124,12 @@ export type Clip = {
   transcript: string;
   link?: string;
   deleteLink?: string;
+  folder?: string;
 };
+
+export type Folder = { id: string; name: string; createdAt: string };
+
+export type ClipPatch = Partial<Pick<Clip, "title" | "favorite" | "tags" | "game" | "folder">>;
 
 export type Encoder = { name: string; label: string; codec: string; vendor: string; hardware: boolean; available: boolean; error?: string; detail?: string };
 export type GPU = { name: string; vendor: string; driver: string };
@@ -188,6 +193,7 @@ export type Bootstrap = {
   whatsNew: { version: string; notes: string } | null;
   features: { ddagrab: boolean; initialised: boolean };
   clips: Clip[] | null;
+  folders: Folder[] | null;
   jobs: Job[] | null;
 };
 
@@ -252,8 +258,12 @@ export const api = {
   audioDevices: () => call<{ outputs: AudioDevice[]; inputs: AudioDevice[] }>("ListAudioDevices"),
   monitors: () => call<Monitor[]>("ListMonitors"),
   clips: () => call<Clip[]>("ListClips"),
-  updateClip: (id: string, patch: Partial<Pick<Clip, "title" | "favorite" | "tags" | "game">>) => call<Clip>("UpdateClip", id, patch),
+  updateClip: (id: string, patch: ClipPatch) => call<Clip>("UpdateClip", id, patch),
+  updateClips: (ids: string[], patch: ClipPatch) => call<void>("UpdateClips", ids, patch),
   deleteClips: (ids: string[]) => call<void>("DeleteClips", ids),
+  createFolder: (name: string) => call<Folder>("CreateFolder", name),
+  renameFolder: (id: string, name: string) => call<Folder>("RenameFolder", id, name),
+  deleteFolder: (id: string) => call<void>("DeleteFolder", id),
   rescan: () => call<void>("Rescan"),
   waveform: (id: string, track: number, buckets: number) => call<number[]>("GetWaveform", id, track, buckets),
   revealClip: (id: string) => call<void>("RevealClip", id),

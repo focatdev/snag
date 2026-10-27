@@ -1,5 +1,5 @@
 // fake backend for ?mock
-import type { AppStatus, Bootstrap, Clip, Job, Settings } from "./api";
+import type { AppStatus, Bootstrap, Clip, Folder, Job, Settings } from "./api";
 
 const q = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
 // screenshot setups: ?mock&onboard, &update, &whatsnew, &nogpu, &noffmpeg, &waiting, &state=error, &readme
@@ -53,7 +53,21 @@ const clips: Clip[] = games.map((g, i) => ({
   origSize: i === 5 ? 160 * 1024 * 1024 : 0,
   aiTitled: i < 2,
   transcript: i === 1 ? "no way he's still alive, I got the last two on B" : "",
+  folder: i === 1 || i === 6 ? "f1" : i === 0 || i === 3 ? "f2" : undefined,
 }));
+
+let folders: Folder[] = [
+  { id: "f1", name: "Best of", createdAt: new Date(now - 86400000 * 3).toISOString() },
+  { id: "f2", name: "With friends", createdAt: new Date(now - 86400000).toISOString() },
+];
+const sortedFolders = () => [...folders].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+const folderName = (name: string, except = "") => {
+  const n = name.trim().replace(/\s+/g, " ");
+  if (!n) throw new Error("give the folder a name");
+  const taken = folders.find((f) => f.id !== except && f.name.toLowerCase() === n.toLowerCase());
+  if (taken) throw new Error(`you already have a folder called ${taken.name}`);
+  return n;
+};
 
 let settings: Settings = {
   clipsDir: "C:\\Users\\you\\Videos\\Snag",
@@ -186,8 +200,32 @@ const handlers: Record<string, (...a: any[]) => unknown> = {
     ],
     features: { ddagrab: true, initialised: true },
     clips,
+    folders: sortedFolders(),
     jobs,
   }),
+  UpdateClips: (ids: string[], p: Partial<Clip>) => {
+    clips.filter((c) => ids.includes(c.id)).forEach((c) => Object.assign(c, p));
+    emit("clips:changed", null);
+  },
+  ListFolders: sortedFolders,
+  CreateFolder: (name: string) => {
+    const f = { id: Math.random().toString(36).slice(2), name: folderName(name), createdAt: new Date().toISOString() };
+    folders.push(f);
+    emit("folders:changed", sortedFolders());
+    return f;
+  },
+  RenameFolder: (id: string, name: string) => {
+    const f = folders.find((f) => f.id === id)!;
+    f.name = folderName(name, id);
+    emit("folders:changed", sortedFolders());
+    return f;
+  },
+  DeleteFolder: (id: string) => {
+    folders = folders.filter((f) => f.id !== id);
+    clips.forEach((c) => c.folder === id && (c.folder = undefined));
+    emit("folders:changed", sortedFolders());
+    emit("clips:changed", null);
+  },
   GetStatus: status,
   SaveSettings: (s: Settings) => (settings = s),
   EstimateBitrate: (s: Settings) => {

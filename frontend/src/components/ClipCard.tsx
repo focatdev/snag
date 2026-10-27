@@ -1,5 +1,6 @@
-import { ArrowsInSimple, CheckSquare, CloudArrowUp, LinkSimple, Copy, FilmSlate, FolderOpen, Microphone, PencilSimple, Sparkle, Square, Star, Trash } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
+import { ArrowsInSimple, CheckSquare, CloudArrowUp, LinkSimple, Copy, FilmSlate, FolderOpen, FolderSimple, Microphone, PencilSimple, Sparkle, Square, Star, Trash } from "@phosphor-icons/react";
+import { useRef, useState, type MouseEvent } from "react";
+import { CLIP_DRAG, folderMenu } from "@/features/library/Folders";
 import fern from "@/assets/fern.jpg";
 import live from "@/assets/live.jpg";
 import paused from "@/assets/paused.jpg";
@@ -35,9 +36,9 @@ export function Thumb({ clip, scrub = true, badge = true, className }: { clip: C
       onMouseLeave={() => setHoverX(null)}
     >
       {thumb ? (
-        <img src={thumb} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={thumb} alt="" loading="lazy" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
       ) : mock && mockThumb(clip) ? (
-        <img src={mockThumb(clip)!} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={mockThumb(clip)!} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
       ) : mock ? (
         <div className="absolute inset-0" style={{ backgroundImage: `url(${mockThumbs[clip.id.charCodeAt(4) % mockThumbs.length]})`, backgroundSize: "220%", backgroundPosition: `${(clip.id.charCodeAt(4) * 37) % 100}% 50%` }} />
       ) : (
@@ -66,10 +67,21 @@ export async function copyClip(id: string) {
   }
 }
 
-export function ClipCard({ clip, selected, selecting, voiceHit, onToggleSelect }: { clip: Clip; selected?: boolean; selecting?: boolean; voiceHit?: boolean; onToggleSelect?: () => void }) {
+// a plain element, the default ghost of a whole card covers the sidebar
+function dragGhost(text: string) {
+  const el = document.createElement("div");
+  el.textContent = text;
+  el.className = "fixed -top-20 left-0 max-w-[240px] truncate rounded-[6px] border border-line bg-raised px-2.5 py-1.5 text-sm text-fg";
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 0);
+  return el;
+}
+
+export function ClipCard({ clip, selected, selecting, voiceHit, onToggleSelect, dragSet }: { clip: Clip; selected?: boolean; selecting?: boolean; voiceHit?: boolean; onToggleSelect?: (e?: MouseEvent) => void; dragSet?: () => string[] }) {
   const go = useStore((s) => s.go);
   const patch = useStore((s) => s.patchClip);
-  const open = () => (selecting && onToggleSelect ? onToggleSelect() : go({ name: "clip", id: clip.id }));
+  const folders = useStore((s) => s.folders);
+  const open = (e: MouseEvent) => (onToggleSelect && (selecting || e.ctrlKey || e.metaKey || e.shiftKey) ? onToggleSelect(e) : go({ name: "clip", id: clip.id }));
   const fav = async () => patch(await api.updateClip(clip.id, { favorite: !clip.favorite }));
 
   return (
@@ -77,6 +89,7 @@ export function ClipCard({ clip, selected, selecting, voiceHit, onToggleSelect }
       items={[
         { label: "Open", icon: <PencilSimple size={15} />, onSelect: () => go({ name: "clip", id: clip.id }) },
         { label: clip.favorite ? "Remove favorite" : "Favorite", icon: <Star size={15} />, onSelect: fav },
+        { label: "Move to folder", icon: <FolderSimple size={15} />, sub: folderMenu(folders, [clip.id], [clip.folder]) },
         { label: "Copy to clipboard", icon: <Copy size={15} />, onSelect: () => copyClip(clip.id) },
         { label: "Show in folder", icon: <FolderOpen size={15} />, onSelect: () => api.revealClip(clip.id) },
         { label: "Upload and copy link", icon: <CloudArrowUp size={15} />, onSelect: () => uploadClip(clip.id) },
@@ -89,7 +102,18 @@ export function ClipCard({ clip, selected, selecting, voiceHit, onToggleSelect }
         { label: "Move to recycle bin", icon: <Trash size={15} />, danger: true, onSelect: () => api.deleteClips([clip.id]) },
       ]}
     >
-      <div className="group relative">
+      <div
+        className="group relative"
+        draggable
+        onDragStart={(e) => {
+          const ids = selected && dragSet ? dragSet() : [clip.id];
+          // drop whatever chromium attached, a Files entry makes wails block the drop
+          e.dataTransfer.clearData();
+          e.dataTransfer.setData(CLIP_DRAG, JSON.stringify(ids));
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setDragImage(dragGhost(ids.length === 1 ? clip.title : `${ids.length} clips`), 14, 14);
+        }}
+      >
         <button onClick={open} className={cn("block w-full rounded-[8px] text-left outline-offset-4", selected && "ring-2 ring-frost ring-offset-4 ring-offset-canvas")}>
           <Thumb clip={clip} />
           <div className="mt-2 flex items-start gap-2 px-0.5">
