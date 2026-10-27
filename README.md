@@ -88,8 +88,6 @@ Local builds don't update themselves. `npm run dev` inside `frontend` opens the 
 
 <br>
 
-The first time, make an empty repo on GitHub and run `publish.bat https://github.com/you/snag.git`. After that, `publish.bat` on its own pushes whatever changed.
-
 Push a tag and GitHub Actions builds both exes, writes `checksums.txt` and publishes the release:
 
 ```
