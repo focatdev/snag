@@ -1,10 +1,35 @@
 package library
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"snag/internal/ffmpeg"
 )
+
+func TestPruneKeepsFolderClips(t *testing.T) {
+	dir := t.TempDir()
+	l := Open(dir, func() ffmpeg.Tools { return ffmpeg.Tools{} }, nil)
+	f, _ := l.CreateFolder("keep")
+	var ids []string
+	for _, name := range []string{"a.mp4", "b.mp4"} {
+		p := filepath.Join(dir, name)
+		os.WriteFile(p, make([]byte, 1024), 0o644)
+		ids = append(ids, l.Add(NewClip{Path: p}).ID)
+	}
+	l.UpdateMany(ids[:1], Patch{Folder: &f.ID})
+
+	if n := l.Prune(1, true); n != 1 {
+		t.Fatalf("pruned %d, want only the clip outside the folder", n)
+	}
+	if _, ok := l.Get(ids[0]); !ok {
+		t.Fatal("folder clip was pruned")
+	}
+	if n := l.Prune(1, false); n != 1 {
+		t.Fatalf("pruned %d with the setting off, want 1", n)
+	}
+}
 
 func TestFolders(t *testing.T) {
 	dir := t.TempDir()

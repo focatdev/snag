@@ -63,6 +63,7 @@ type Settings struct {
 
 	StorageBudgetEnabled bool `json:"storageBudgetEnabled"`
 	StorageBudgetGB      int  `json:"storageBudgetGB"`
+	KeepFolderClips      bool `json:"keepFolderClips"`
 	AutoShrinkDays       int  `json:"autoShrinkDays"`
 	CopyScreenshots      bool `json:"copyScreenshots"`
 

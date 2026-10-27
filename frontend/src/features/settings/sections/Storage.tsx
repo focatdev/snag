@@ -153,6 +153,11 @@ export function StorageSection({ s, set }: SectionProps) {
           </div>
         </Row>
       )}
+      {s.storageBudgetEnabled && (
+        <Row title="Keep clips in folders" desc="The limit skips them like favorites">
+          <Switch checked={s.keepFolderClips} onCheckedChange={(v) => set({ keepFolderClips: v })} />
+        </Row>
+      )}
       {usage && (
         <div className="mt-2 rounded-card border border-line-soft p-4">
           <div className="mb-2 flex justify-between text-xs">

@@ -116,6 +116,7 @@ let settings: Settings = {
   copyExports: true,
   storageBudgetEnabled: false,
   storageBudgetGB: 20,
+  keepFolderClips: false,
   launchOnStartup: false,
   startMinimized: false,
   closeToTray: true,

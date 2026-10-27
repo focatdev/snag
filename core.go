@@ -376,7 +376,7 @@ func (c *Core) saveClip(seconds int) {
 	}
 	c.emit("clip:saved", clip)
 	if s.StorageBudgetEnabled {
-		if n := c.lib.Prune(int64(s.StorageBudgetGB) << 30); n > 0 {
+		if n := c.lib.Prune(int64(s.StorageBudgetGB)<<30, s.KeepFolderClips); n > 0 {
 			c.toast("info", fmt.Sprintf("Storage budget reached, removed %d old clip%s", n, plural(n)))
 		}
 	}
@@ -449,7 +449,7 @@ func (c *Core) applySettings(prev, next config.Settings) {
 		go c.lib.Scan(next.ClipsDir, next.ExportsPath())
 	}
 	if next.StorageBudgetEnabled {
-		go c.lib.Prune(int64(next.StorageBudgetGB) << 30)
+		go c.lib.Prune(int64(next.StorageBudgetGB)<<30, next.KeepFolderClips)
 	}
 	if prev.SmartMode && !next.SmartMode && next.AutoStartBuffer {
 		c.rec.Start()

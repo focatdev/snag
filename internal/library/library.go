@@ -490,8 +490,8 @@ func (l *Library) Usage(clipsDir string, s config.Settings) Usage {
 	return u
 }
 
-// skip favorites
-func (l *Library) Prune(budget int64) int {
+// skip favorites, and folder clips when the user asked for that
+func (l *Library) Prune(budget int64, keepFolders bool) int {
 	if budget <= 0 {
 		return 0
 	}
@@ -508,7 +508,7 @@ func (l *Library) Prune(budget int64) int {
 		if total <= budget {
 			break
 		}
-		if c.Favorite {
+		if c.Favorite || keepFolders && c.Folder != "" {
 			continue
 		}
 		if err := os.Remove(c.Path); err != nil && !errors.Is(err, fs.ErrNotExist) {

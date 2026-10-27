@@ -50,6 +50,7 @@ export type Settings = {
   copyExports: boolean;
   storageBudgetEnabled: boolean;
   storageBudgetGB: number;
+  keepFolderClips: boolean;
   launchOnStartup: boolean;
   startMinimized: boolean;
   closeToTray: boolean;
