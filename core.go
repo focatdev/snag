@@ -137,12 +137,16 @@ func (c *Core) Features() ffmpeg.Features {
 	return c.features
 }
 
+// bump when Features gains a field, old caches would read it as false
+const probeSchema = 2
+
 type toolCache struct {
 	FFmpeg   string           `json:"ffmpeg"`
 	Version  string           `json:"version"`
 	Encoders []ffmpeg.Encoder `json:"encoders"`
 	Features ffmpeg.Features  `json:"features"`
 	Drivers  string           `json:"drivers"`
+	Schema   int              `json:"schema"`
 }
 
 // new driver, new encoder results
@@ -177,7 +181,7 @@ func (c *Core) loadToolCache() {
 	var tc toolCache
 	if b, err := os.ReadFile(c.cachePath()); err == nil && json.Unmarshal(b, &tc) == nil {
 		// cpu-only results get retested, the gpu may have just been busy
-		if tc.FFmpeg == t.FFmpeg && tc.Version == t.Version && tc.Drivers == driverSignature() && anyHardware(tc.Encoders) {
+		if tc.Schema == probeSchema && tc.FFmpeg == t.FFmpeg && tc.Version == t.Version && tc.Drivers == driverSignature() && anyHardware(tc.Encoders) {
 			c.encoders, c.features = tc.Encoders, tc.Features
 		}
 	}
@@ -202,7 +206,7 @@ func (c *Core) probeTools(force bool) {
 	c.mu.Lock()
 	c.encoders, c.features = encs, feats
 	c.mu.Unlock()
-	b, _ := json.MarshalIndent(toolCache{FFmpeg: t.FFmpeg, Version: t.Version, Encoders: encs, Features: feats, Drivers: driverSignature()}, "", " ")
+	b, _ := json.MarshalIndent(toolCache{FFmpeg: t.FFmpeg, Version: t.Version, Encoders: encs, Features: feats, Drivers: driverSignature(), Schema: probeSchema}, "", " ")
 	config.WriteFileAtomic(c.cachePath(), b)
 	// only touch ffmpeg we installed ourselves
 	if nvencTooOld(encs) && s.FFmpegPath == "" && !c.autoFixed.Swap(true) {

@@ -292,7 +292,7 @@ func (r *Recorder) run(ctx context.Context) (bool, error) {
 	srcW, srcH, left, top := m.Width, m.Height, m.Left, m.Top
 	outW, outH := s.OutputSize(srcW, srcH)
 	spec := captureSpec{
-		Encoder: enc, Monitor: s.Monitor, MonLeft: left, MonTop: top,
+		Encoder: enc, Monitor: s.Monitor, MonLeft: left, MonTop: top, MonHandle: m.Handle,
 		SrcW: srcW, SrcH: srcH, OutW: outW, OutH: outH,
 		FPS: s.FPS, Kbps: s.BitrateKbps(outW, outH), Cursor: s.DrawCursor,
 	}
@@ -306,7 +306,7 @@ func (r *Recorder) run(ctx context.Context) (bool, error) {
 	}
 
 	var lastErr error
-	for _, p := range pipelines(r.d.Features(), enc, outW != srcW || outH != srcH) {
+	for _, p := range pipelines(r.d.Features(), enc, outW != srcW || outH != srcH, wgcUsable(winapi.WindowsBuild(), s.FPS)) {
 		spec.Pipeline = p
 		started, err := r.attempt(ctx, spec, s)
 		if started || ctx.Err() != nil {

@@ -431,6 +431,7 @@ type Features struct {
 	ScaleD3D11  bool `json:"scaleD3d11"`
 	GDIGrab     bool `json:"gdigrab"`
 	ScaleCUDA   bool `json:"scaleCuda"`
+	GfxCapture  bool `json:"gfxcapture"`
 	LibWebP     bool `json:"libwebp"`
 	Initialised bool `json:"initialised"`
 }
@@ -442,6 +443,7 @@ func DetectFeatures(ctx context.Context, bin string) Features {
 		f.DDAGrab = strings.Contains(s, " ddagrab ")
 		f.ScaleD3D11 = strings.Contains(s, " scale_d3d11 ")
 		f.ScaleCUDA = strings.Contains(s, " scale_cuda ")
+		f.GfxCapture = strings.Contains(s, " gfxcapture ")
 	}
 	if out, err := Output(ctx, bin, "-hide_banner", "-devices"); err == nil {
 		f.GDIGrab = strings.Contains(string(out), "gdigrab")

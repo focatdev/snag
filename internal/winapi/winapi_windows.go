@@ -149,13 +149,14 @@ func Foreground() (ForegroundInfo, error) {
 }
 
 type Monitor struct {
-	Index   int    `json:"index"`
-	Left    int    `json:"left"`
-	Top     int    `json:"top"`
-	Width   int    `json:"width"`
-	Height  int    `json:"height"`
-	Primary bool   `json:"primary"`
-	Label   string `json:"label"`
+	Index   int     `json:"index"`
+	Left    int     `json:"left"`
+	Top     int     `json:"top"`
+	Width   int     `json:"width"`
+	Height  int     `json:"height"`
+	Primary bool    `json:"primary"`
+	Label   string  `json:"label"`
+	Handle  uintptr `json:"-"`
 }
 
 var (
@@ -164,7 +165,7 @@ var (
 	monProc = syscall.NewCallback(func(hmon, hdc, rect, data uintptr) uintptr {
 		mi := monitorInfo{cbSize: uint32(unsafe.Sizeof(monitorInfo{}))}
 		if r, _, _ := procGetMonitorInfoW.Call(hmon, uintptr(unsafe.Pointer(&mi))); r != 0 {
-			monAcc = append(monAcc, Monitor{Left: int(mi.rcMonitor.Left), Top: int(mi.rcMonitor.Top), Width: mi.rcMonitor.W(), Height: mi.rcMonitor.H(), Primary: mi.dwFlags&1 != 0})
+			monAcc = append(monAcc, Monitor{Left: int(mi.rcMonitor.Left), Top: int(mi.rcMonitor.Top), Width: mi.rcMonitor.W(), Height: mi.rcMonitor.H(), Primary: mi.dwFlags&1 != 0, Handle: hmon})
 		}
 		return 1
 	})

@@ -264,11 +264,24 @@ type osVersionInfo struct {
 }
 
 // GetVersionEx lies without a manifest entry
-func WindowsVersion() string {
+func osVersion() (osVersionInfo, bool) {
 	var v osVersionInfo
 	v.size = uint32(unsafe.Sizeof(v))
 	r, _, _ := syscall.NewLazyDLL("ntdll.dll").NewProc("RtlGetVersion").Call(uintptr(unsafe.Pointer(&v)))
-	if r != 0 {
+	return v, r == 0
+}
+
+func WindowsBuild() int {
+	v, ok := osVersion()
+	if !ok {
+		return 0
+	}
+	return int(v.build)
+}
+
+func WindowsVersion() string {
+	v, ok := osVersion()
+	if !ok {
 		return "unknown"
 	}
 	name := "Windows 10"

@@ -12,6 +12,8 @@ type pipeline string
 
 const (
 	pipeGPU    pipeline = "gpu"
+	pipeWGC    pipeline = "wgc"
+	pipeCUDA   pipeline = "cuda"
 	pipeSystem pipeline = "system"
 	pipeGDI    pipeline = "gdi"
 )
@@ -31,6 +33,7 @@ type captureSpec struct {
 	Monitor    int
 	MonLeft    int
 	MonTop     int
+	MonHandle  uintptr
 	SrcW, SrcH int
 	OutW, OutH int
 	FPS        int
@@ -110,6 +113,8 @@ func buildArgs(s captureSpec) []string {
 		a = append(a, "-f", "gdigrab", "-framerate", fps, "-draw_mouse", cursor,
 			"-offset_x", strconv.Itoa(s.MonLeft), "-offset_y", strconv.Itoa(s.MonTop),
 			"-video_size", fmt.Sprintf("%dx%d", s.SrcW, s.SrcH), "-i", "desktop")
+	case pipeWGC:
+		a = append(a, "-f", "lavfi", "-i", fmt.Sprintf("gfxcapture=hmonitor=%d:capture_cursor=%s:max_framerate=%s:width=%d:height=%d:resize_mode=scale", s.MonHandle, cursor, fps, s.OutW, s.OutH))
 	default:
 		a = append(a, "-f", "lavfi", "-i", fmt.Sprintf("ddagrab=output_idx=%d:framerate=%s:draw_mouse=%s:dup_frames=1", s.Monitor, fps, cursor))
 	}
@@ -132,10 +137,13 @@ func buildArgs(s captureSpec) []string {
 		pixfmt = "yuv420p"
 	}
 	switch s.Pipeline {
-	case pipeGPU:
+	case pipeGPU, pipeWGC:
 		if vendorOf(s.Encoder) == "intel" {
 			a = append(a, "-vf", "hwmap=derive_device=qsv,format=qsv")
 		}
+	case pipeCUDA:
+		// d3d11 frames can't be mapped to cuda, so this still pays for one download
+		a = append(a, "-vf", fmt.Sprintf("hwdownload,format=bgra,hwupload_cuda,scale_cuda=%d:%d:interp_algo=bilinear", s.OutW, s.OutH))
 	case pipeSystem:
 		a = append(a, "-vf", "hwdownload,format=bgra,"+scale+"format="+pixfmt)
 	case pipeGDI:
@@ -155,11 +163,24 @@ func buildArgs(s captureSpec) []string {
 	return append(a, "-f", "mpegts", "-muxdelay", "0", "-muxpreload", "0", "-flush_packets", "1", "pipe:1")
 }
 
-func pipelines(f ffmpeg.Features, enc string, scaling bool) []pipeline {
+// wgc can hide its yellow border from 20348, past 60 fps needs 26100
+func wgcUsable(build, fps int) bool {
+	return build >= 26100 || build >= 20348 && fps <= 60
+}
+
+// scale_d3d11 is skipped, nvidia drivers reject the encoder textures it asks for
+func pipelines(f ffmpeg.Features, enc string, scaling, wgc bool) []pipeline {
 	var out []pipeline
+	hw := vendorOf(enc) != "cpu"
+	if scaling && hw && wgc && f.GfxCapture {
+		out = append(out, pipeWGC)
+	}
 	if f.DDAGrab || !f.Initialised {
-		if vendorOf(enc) != "cpu" && !scaling {
+		switch {
+		case hw && !scaling:
 			out = append(out, pipeGPU)
+		case scaling && vendorOf(enc) == "nvidia" && f.ScaleCUDA:
+			out = append(out, pipeCUDA)
 		}
 		out = append(out, pipeSystem)
 	}

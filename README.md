@@ -111,6 +111,8 @@ The release notes are what people see in What's new after updating.
 
 If the GPU path won't start, Snag falls back to copying frames through system memory, then to GDI. Closing the window destroys the webview, so the tray process idles on very little RAM.
 
+Recording below your screen's resolution scales on the GPU through Windows Graphics Capture on Windows 11. On Windows 10, NVIDIA cards scale with CUDA, which still copies each frame once. Other cards scale on the CPU there.
+
 </details>
 
 <details>
