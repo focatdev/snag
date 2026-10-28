@@ -43,6 +43,7 @@ type Ring struct {
 	firstPTS int64
 	marks    []int64
 	seenKey  bool
+	vidAt    time.Time
 	disk     string
 	seq      int
 	orphans  []*segment
@@ -96,6 +97,17 @@ func (r *Ring) Reset() {
 	r.audPIDs = nil
 	r.marks = nil
 	r.seenKey = false
+	r.vidAt = time.Time{}
+}
+
+// how long since ffmpeg last sent a video frame, zero before the first one
+func (r *Ring) VideoAge() time.Duration {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.vidAt.IsZero() {
+		return 0
+	}
+	return time.Since(r.vidAt)
 }
 
 // a restarted pipe can leave a partial packet
@@ -157,6 +169,7 @@ func (r *Ring) packet(p []byte) {
 	}
 
 	if pid == r.vidPID && pusi && payload != nil {
+		r.vidAt = time.Now()
 		pts := parsePTS(payload)
 		if pts >= 0 {
 			r.lastPTS = pts
@@ -339,7 +352,7 @@ func (r *Ring) Snapshot(w io.Writer, seconds float64, since int64) (SnapInfo, er
 		chunks = append(chunks, chunk{data: data})
 	}
 	info := SnapInfo{StartPTS: all[start].pts, EndPTS: end}
-	trim := newLeadTrim(r.audPIDs, info.StartPTS)
+	trim := newAVTrim(r.audPIDs, info.StartPTS, end)
 	if info.StartPTS >= 0 && end >= 0 {
 		info.Seconds = float64(ptsDiff(end, info.StartPTS)) / clock
 	}
@@ -511,15 +524,18 @@ func audioPIDs(payload []byte) map[int]bool {
 	return out
 }
 
-// audio before the first frame makes the mp4 longer than the video
-type leadTrim struct {
-	start   int64
-	waiting map[int]bool
+// audio outside the video makes the mp4 longer than the video, by hours if the video stalled
+type avTrim struct {
+	start, end int64
+	aud        map[int]bool
+	waiting    map[int]bool
+	past       map[int]bool
 }
 
-func newLeadTrim(aud map[int]bool, start int64) *leadTrim {
-	t := &leadTrim{start: start, waiting: map[int]bool{}}
+func newAVTrim(aud map[int]bool, start, end int64) *avTrim {
+	t := &avTrim{start: start, end: end, aud: aud, waiting: map[int]bool{}, past: map[int]bool{}}
 	if start < 0 {
+		t.aud = nil
 		return t
 	}
 	for pid := range aud {
@@ -528,31 +544,47 @@ func newLeadTrim(aud map[int]bool, start int64) *leadTrim {
 	return t
 }
 
-func (t *leadTrim) filter(data []byte) []byte {
-	if len(t.waiting) == 0 {
+func pesStartPTS(p []byte) int64 {
+	afc := (p[3] >> 4) & 3
+	o := 4
+	if afc&2 != 0 {
+		o = 5 + int(p[4])
+	}
+	if afc&1 == 0 || o >= PacketSize {
+		return -1
+	}
+	return parsePTS(p[o:])
+}
+
+func (t *avTrim) filter(data []byte) []byte {
+	if len(t.aud) == 0 {
 		return data
 	}
 	out := data[:0:0]
 	for off := 0; off+PacketSize <= len(data); off += PacketSize {
 		p := data[off : off+PacketSize]
 		pid := int(p[1]&0x1f)<<8 | int(p[2])
-		if t.waiting[pid] {
+		if t.aud[pid] {
+			if t.past[pid] {
+				continue
+			}
 			if p[1]&0x40 == 0 {
-				continue
+				if t.waiting[pid] {
+					continue
+				}
+			} else {
+				pts := pesStartPTS(p)
+				if t.waiting[pid] {
+					if pts < 0 || ptsDiff(pts, t.start) < 0 {
+						continue
+					}
+					delete(t.waiting, pid)
+				}
+				if pts >= 0 && t.end >= 0 && ptsDiff(pts, t.end) > clock {
+					t.past[pid] = true
+					continue
+				}
 			}
-			afc := (p[3] >> 4) & 3
-			o := 4
-			if afc&2 != 0 {
-				o = 5 + int(p[4])
-			}
-			if afc&1 == 0 || o >= PacketSize {
-				continue
-			}
-			pts := parsePTS(p[o:])
-			if pts < 0 || ptsDiff(pts, t.start) < 0 {
-				continue
-			}
-			delete(t.waiting, pid)
 		}
 		out = append(out, p...)
 	}

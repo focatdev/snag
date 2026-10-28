@@ -312,6 +312,8 @@ func (r *Recorder) run(ctx context.Context) (bool, error) {
 		if started || ctx.Err() != nil {
 			return started, err
 		}
+		// otherwise a silent fallback leaves bug reports with no reason
+		slog.Warn("capture method failed, trying the next", "pipeline", p, "encoder", enc, "err", err)
 		lastErr = err
 	}
 	if lastErr == nil {
@@ -476,11 +478,25 @@ wait:
 	r.mu.Unlock()
 	r.notify()
 
-	err = <-exited
-	if ctx.Err() != nil {
-		return true, ctx.Err()
+	// ffmpeg can stay up with the video stuck, then only audio fills the buffer
+	watch := time.NewTicker(time.Second)
+	defer watch.Stop()
+	for {
+		select {
+		case <-exited:
+			if ctx.Err() != nil {
+				return true, ctx.Err()
+			}
+			return true, fmt.Errorf("capture exited: %s", ffmpeg.Tail(stderr.String(), 400))
+		case <-watch.C:
+			if age := r.ring.VideoAge(); age > 8*time.Second {
+				slog.Warn("video stalled, restarting capture", "pipeline", spec.Pipeline, "encoder", spec.Encoder, "for", age.Round(time.Second))
+				cancel()
+				<-exited
+				return true, fmt.Errorf("%s capture stopped sending video: %s", spec.Pipeline, ffmpeg.Tail(stderr.String(), 400))
+			}
+		}
 	}
-	return true, fmt.Errorf("capture exited: %s", ffmpeg.Tail(stderr.String(), 400))
 }
 
 func (r *Recorder) AddMark() bool { return r.ring.AddMark() }

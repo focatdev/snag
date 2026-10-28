@@ -79,6 +79,43 @@ func runRing(t *testing.T, disk string) {
 	}
 }
 
+// video stops while audio keeps coming, like a stuck ddagrab
+func TestVideoStallKeepsClipShort(t *testing.T) {
+	ff, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Skip("ffmpeg not on path")
+	}
+	src, err := exec.Command(ff, "-hide_banner", "-loglevel", "error",
+		"-f", "lavfi", "-i", "testsrc2=size=320x240:rate=30:duration=6",
+		"-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=40",
+		"-map", "0:v", "-map", "1:a",
+		"-c:v", "libx264", "-preset", "ultrafast", "-g", "30", "-bf", "0",
+		"-c:a", "aac", "-f", "mpegts", "-muxdelay", "0", "-muxpreload", "0", "pipe:1").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRing(60 * time.Second)
+	_ = r.Feed(bytes.NewReader(src))
+
+	var buf bytes.Buffer
+	if _, err := r.Snapshot(&buf, 3, -1); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	ts, mp4 := filepath.Join(dir, "s.ts"), filepath.Join(dir, "s.mp4")
+	os.WriteFile(ts, buf.Bytes(), 0o644)
+	if b, err := exec.Command(ff, "-hide_banner", "-loglevel", "error", "-i", ts, "-map", "0", "-c", "copy", "-avoid_negative_ts", "make_zero", mp4).CombinedOutput(); err != nil {
+		t.Fatalf("remux: %v %s", err, b)
+	}
+	out, err := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d, _ := strconv.ParseFloat(strings.TrimSpace(string(out)), 64); d > 5 {
+		t.Fatalf("clip is %.1fs, the audio after the video stopped leaked in", d)
+	}
+}
+
 func TestRestartAndLeadTrim(t *testing.T) {
 	ff, err := exec.LookPath("ffmpeg")
 	if err != nil {
