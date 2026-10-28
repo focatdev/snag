@@ -8,6 +8,8 @@
   <a href="#build-it-yourself">Build</a>
   &nbsp;&nbsp;/&nbsp;&nbsp;
   <a href="../../issues/new?template=bug_report.yml">Report a bug</a>
+  &nbsp;&nbsp;/&nbsp;&nbsp;
+  <a href="https://discord.gg/N9wpJSZUnz">Discord</a>
 </p>
 
 <br>
