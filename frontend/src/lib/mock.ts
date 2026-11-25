@@ -105,6 +105,10 @@ let settings: Settings = {
   aiModel: "",
   aiAutoTitle: true,
   aiTranscribe: false,
+  voiceTrigger: false,
+  voicePhrase: "clip that",
+  voiceDir: "",
+  voiceSensitivity: 50,
   smartMode: false,
   autoStartBuffer: true,
   saveSound: true,
@@ -159,6 +163,7 @@ function status(): AppStatus {
     ffmpeg: { ffmpeg: "ffmpeg.exe", ffprobe: "ffprobe.exe", version: "8.0" },
     ffmpegReady: !scenario.noFFmpeg,
     download: { active: false, done: 0, total: 0, error: "" },
+    voice: { ready: false, dir: "C:\\Users\\you\\AppData\\Local\\Snag\\kws", error: "", download: { active: false, done: 0, total: 0, error: "" } },
     hotkeyErrors: [],
     activeJobs: jobs.filter((j) => j.status === "running" || j.status === "queued").length,
   };
@@ -297,6 +302,7 @@ const handlers: Record<string, (...a: any[]) => unknown> = {
   SaveClip: () => setTimeout(() => emit("toast", { kind: "success", message: `Saved ${liveGame} 2026-10-24 19-41-03` }), 300),
   AddBookmark: () => emit("toast", { kind: "info", message: "Bookmark added" }),
   PickFolder: () => "C:\\Users\\you\\Videos\\Snag",
+  DownloadVoice: () => undefined,
   CopyClip: () => undefined,
   AIProviders: () => [
     { id: "groq", label: "Groq", model: "qwen/qwen3.8-27b", transcribe: true, keyUrl: "https://console.groq.com/keys" },

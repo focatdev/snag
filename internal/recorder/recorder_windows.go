@@ -110,6 +110,12 @@ func (r *Recorder) notify() {
 	}
 }
 
+func (r *Recorder) State() State {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.state
+}
+
 func (r *Recorder) Status() Status {
 	secs, bytes := r.ring.Buffered()
 	r.mu.Lock()

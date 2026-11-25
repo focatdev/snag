@@ -11,12 +11,14 @@ import { HotkeysSection } from "./sections/Hotkeys";
 import { SharingSection } from "./sections/Sharing";
 import { StorageSection } from "./sections/Storage";
 import { VideoSection } from "./sections/Video";
+import { VoiceSection } from "./sections/Voice";
 
 export const sections = [
   ["capture", "Video"],
   ["buffer", "Clips"],
   ["audio", "Audio"],
   ["hotkeys", "Hotkeys"],
+  ["voice", "Voice"],
   ["storage", "Storage"],
   ["sharing", "Sharing"],
   ["ai", "AI"],
@@ -70,6 +72,7 @@ export function Settings() {
         <ClipsSection s={s} set={set} est={est} />
         <AudioSection s={s} set={set} />
         <HotkeysSection s={s} set={set} />
+        <VoiceSection s={s} set={set} />
         <StorageSection s={s} set={set} />
         <SharingSection s={s} set={set} />
         <AISection s={s} set={set} />

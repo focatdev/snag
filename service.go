@@ -130,6 +130,8 @@ func (s *SnagService) AddBookmark()   { s.c.addMark() }
 
 func (s *SnagService) DownloadFFmpeg() error { return s.c.download() }
 
+func (s *SnagService) DownloadVoice() error { return s.c.downloadVoice() }
+
 func (s *SnagService) ReprobeEncoders() []ffmpeg.Encoder {
 	s.c.probeTools(true)
 	return s.c.Encoders()
