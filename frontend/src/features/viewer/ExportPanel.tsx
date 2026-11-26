@@ -67,7 +67,7 @@ export function ExportPanel({
   const outLen = length / draft.speed;
 
   let estimate = "";
-  if (draft.targetMB > 0) estimate = `under ${draft.targetMB} MB`;
+  if (draft.targetMB > 0) estimate = `under ${bytes(draft.targetMB * 1024 * 1024, 0)}`;
   else if (!encode) estimate = bytes((clip.size * length) / Math.max(clip.duration, 0.01));
   else if (draft.format === "gif") estimate = bytes(outLen * 0.6 * 1024 * 1024);
   else {
@@ -92,18 +92,18 @@ export function ExportPanel({
         </Field>
 
         {draft.format === "mp4" && (
-          <Field label="Size limit" hint={draft.targetMB === 10 ? "Discord free upload limit" : draft.targetMB === 50 ? "Discord Nitro Basic" : draft.targetMB === 500 ? "Discord Nitro" : undefined}>
+          <Field label="Size limit" hint={draft.targetMB === 20 ? "Discord free upload limit" : draft.targetMB === 50 ? "Discord Nitro Basic" : draft.targetMB === 1024 ? "Discord Nitro" : undefined}>
             <Select
               className="w-full"
               value={String(draft.targetMB)}
               onChange={(v) => set({ targetMB: Number(v) })}
               options={[
                 { value: "0", label: "No limit" },
-                { value: "10", label: "10 MB" },
+                { value: "20", label: "20 MB" },
                 { value: "25", label: "25 MB" },
                 { value: "50", label: "50 MB" },
                 { value: "100", label: "100 MB" },
-                { value: "500", label: "500 MB" },
+                { value: "1024", label: "1 GB" },
               ]}
             />
           </Field>

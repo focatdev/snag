@@ -30,7 +30,7 @@ Snag keeps the last minute of your game ready and saves it when you press **F8**
 
 **Capture.** Fullscreen games included, through Desktop Duplication straight into the GPU encoder. Game audio, mic and Discord can each get their own track, so you can mute your friends later and keep the game sound. Snag can also wait until a game is open before it starts.
 
-**Edit.** Trim, cut out the boring middle, merge clips, speed up, crop to 9:16 for Shorts, add motion blur, or squeeze a clip under Discord's 10 MB limit. Plain trims don't re-encode, so they take about a second.
+**Edit.** Trim, cut out the boring middle, merge clips, speed up, crop to 9:16 for Shorts, add motion blur, or squeeze a clip under Discord's free 20 MB limit. Plain trims don't re-encode, so they take about a second.
 
 **Share.** Every save can land on your clipboard as a file, ready for Ctrl+V in Discord. Uploads go to catbox.moe or any ShareX custom uploader (`.sxcu`), and the link is copied for you.
 
