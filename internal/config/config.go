@@ -78,6 +78,12 @@ type Settings struct {
 	AIAutoTitle  bool   `json:"aiAutoTitle"`
 	AITranscribe bool   `json:"aiTranscribe"`
 
+	VoiceTrigger bool   `json:"voiceTrigger"`
+	VoicePhrase  string `json:"voicePhrase"`
+	VoiceDir     string `json:"voiceDir"`
+	// 0..100, how readily the keyword spotter fires
+	VoiceSensitivity int `json:"voiceSensitivity"`
+
 	LaunchOnStartup bool `json:"launchOnStartup"`
 	StartMinimized  bool `json:"startMinimized"`
 	CloseToTray     bool `json:"closeToTray"`
@@ -108,6 +114,8 @@ func Defaults() Settings {
 		Resolution:         "native",
 		Quality:            "medium",
 		DrawCursor:         true,
+		VoicePhrase:        DefaultVoicePhrase,
+		VoiceSensitivity:   50,
 		BufferSeconds:      60,
 		CaptureSystemAudio: true,
 		CaptureMic:         false,
@@ -161,6 +169,13 @@ func (s *Settings) Normalize() {
 	case "", "openai", "groq", "gemini", "anthropic":
 	default:
 		s.AIProvider = ""
+	}
+	if s.VoiceSensitivity < 0 || s.VoiceSensitivity > 100 {
+		s.VoiceSensitivity = 50
+	}
+	s.VoicePhrase = strings.TrimSpace(s.VoicePhrase)
+	if s.VoicePhrase == "" {
+		s.VoicePhrase = DefaultVoicePhrase
 	}
 	switch s.AutoShrinkDays {
 	case 0, 3, 7, 14, 30:
@@ -295,6 +310,8 @@ func WriteFileAtomic(path string, data []byte) error {
 
 const DefaultTemplate = "{game} {date} {time}"
 
+const DefaultVoicePhrase = "clip that"
+
 // empty means clips\Exports
 func (s Settings) ExportsPath() string {
 	if strings.TrimSpace(s.ExportsDir) != "" {
@@ -350,4 +367,11 @@ func (s Settings) FFmpegInstallDir(dataDir string) string {
 		return s.FFmpegDir
 	}
 	return filepath.Join(dataDir, "bin")
+}
+
+func (s Settings) VoiceInstallDir(dataDir string) string {
+	if strings.TrimSpace(s.VoiceDir) != "" {
+		return strings.TrimSpace(s.VoiceDir)
+	}
+	return filepath.Join(dataDir, "kws")
 }

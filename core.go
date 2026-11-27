@@ -46,6 +46,7 @@ type Core struct {
 	features   ffmpeg.Features
 	hotkeyErrs []string
 	dl         downloadState
+	voice      voiceState
 	aiQueue    chan string
 	upd        updater
 	ctx        context.Context
@@ -76,7 +77,10 @@ func newCore(dataDir string) (*Core, error) {
 		Tools:    c.Tools,
 		Encoders: c.Encoders,
 		Features: c.Features,
-		OnChange: c.pushStatus,
+		OnChange: func() {
+			c.syncVoice()
+			c.pushStatus()
+		},
 	})
 	c.lib = library.Open(dataDir, c.Tools, func() { c.emit("clips:changed", nil) })
 	c.jobs = jobs.New(jobs.Deps{
@@ -257,6 +261,7 @@ type AppStatus struct {
 	FFmpeg       ffmpeg.Tools    `json:"ffmpeg"`
 	FFmpegReady  bool            `json:"ffmpegReady"`
 	Download     downloadState   `json:"download"`
+	Voice        voiceStatus     `json:"voice"`
 	HotkeyErrors []string        `json:"hotkeyErrors"`
 	ActiveJobs   int             `json:"activeJobs"`
 }
@@ -267,6 +272,7 @@ func (c *Core) Status() AppStatus {
 	st := AppStatus{FFmpeg: c.tools, FFmpegReady: c.tools.FFmpeg != "", Download: c.dl, HotkeyErrors: c.hotkeyErrs}
 	c.mu.Unlock()
 	st.Recorder = c.rec.Status()
+	st.Voice = c.voiceStatus()
 	st.Usage = c.lib.Usage(s.ClipsDir, s)
 	for _, j := range c.jobs.List() {
 		if j.Status == "queued" || j.Status == "running" {
@@ -308,6 +314,8 @@ func (c *Core) start() {
 	go c.shrinkLoop()
 	go c.updateLoop()
 	go c.aiWorker()
+	c.refreshVoiceReady()
+	c.syncVoice()
 	go func() {
 		t := time.NewTicker(time.Second)
 		defer t.Stop()
@@ -454,6 +462,10 @@ func (c *Core) applySettings(prev, next config.Settings) {
 	if prev.SmartMode && !next.SmartMode && next.AutoStartBuffer {
 		c.rec.Start()
 	}
+	if prev.VoiceDir != next.VoiceDir {
+		c.refreshVoiceReady()
+	}
+	c.syncVoice()
 	c.pushStatus()
 }
 
@@ -484,38 +496,52 @@ func ceilingFor(t ffmpeg.Tools, encs []ffmpeg.Encoder) int {
 	return 1 << 20
 }
 
-func (c *Core) download() error {
-	c.mu.Lock()
-	if c.dl.Active {
-		c.mu.Unlock()
+func (c *Core) runDownload(mu *sync.Mutex, st *downloadState, fn func(progress func(done, total int64)) error) error {
+	mu.Lock()
+	if st.Active {
+		mu.Unlock()
 		return errors.New("download already running")
 	}
-	c.dl = downloadState{Active: true}
+	*st = downloadState{Active: true}
+	mu.Unlock()
+	c.pushStatus()
+
+	err := fn(func(done, total int64) {
+		mu.Lock()
+		st.Done, st.Total = done, total
+		mu.Unlock()
+	})
+
+	mu.Lock()
+	st.Active = false
+	if err != nil {
+		st.Error = err.Error()
+	}
+	mu.Unlock()
+	c.pushStatus()
+	return err
+}
+
+func (c *Core) download() error {
+	c.mu.Lock()
 	below := ceilingFor(c.tools, c.encoders)
 	c.mu.Unlock()
-	c.pushStatus()
 
 	nvidia := false
 	for _, g := range winapi.GPUs() {
 		nvidia = nvidia || g.Vendor == "nvidia"
 	}
-	_, err := ffmpeg.DownloadFitting(c.ctx, c.store.Get().FFmpegInstallDir(c.dataDir), below, nvidia, func(done, total int64) {
-		c.mu.Lock()
-		c.dl.Done, c.dl.Total = done, total
-		c.mu.Unlock()
-		c.emit("ffmpeg:progress", map[string]int64{"done": done, "total": total})
+	err := c.runDownload(&c.mu, &c.dl, func(progress func(done, total int64)) error {
+		_, err := ffmpeg.DownloadFitting(c.ctx, c.store.Get().FFmpegInstallDir(c.dataDir), below, nvidia, func(done, total int64) {
+			progress(done, total)
+			c.emit("ffmpeg:progress", map[string]int64{"done": done, "total": total})
+		})
+		if err == nil {
+			c.probeTools(true)
+		}
+		return err
 	})
-	if err == nil {
-		c.probeTools(true)
-	}
-	c.mu.Lock()
-	c.dl.Active = false
 	if err != nil {
-		c.dl.Error = err.Error()
-	}
-	c.mu.Unlock()
-	if err != nil {
-		c.pushStatus()
 		return err
 	}
 	if nvencTooOld(c.Encoders()) {
@@ -523,7 +549,7 @@ func (c *Core) download() error {
 	}
 	s := c.store.Get()
 	c.lib.Scan(s.ClipsDir, s.ExportsPath())
-	if s.AutoStartBuffer && !s.SmartMode && c.rec.Status().State == recorder.Idle {
+	if s.AutoStartBuffer && !s.SmartMode && c.rec.State() == recorder.Idle {
 		c.rec.Start()
 	}
 	return nil

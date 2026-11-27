@@ -5,10 +5,9 @@ import { Dialog } from "@/components/ui/dialog";
 import { Tip } from "@/components/ui/tooltip";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import { api, openUrl, type Uploader } from "@/lib/api";
 import { useStore } from "@/lib/store";
-import { Row, Section, type SectionProps } from "../parts";
+import { DraftInput, Row, Section, type SectionProps } from "../parts";
 
 export function SharingSection({ s, set }: SectionProps) {
   const [list, setList] = useState<Uploader[]>([]);
@@ -119,9 +118,6 @@ export function SharingSection({ s, set }: SectionProps) {
 }
 
 function UserhashRow({ value, onSave }: { value: string; onSave: (v: string) => void }) {
-  const [v, setV] = useState(value);
-  useEffect(() => setV(value), [value]);
-  const commit = () => v.trim() !== value && onSave(v.trim());
   return (
     <Row
       title="Catbox account"
@@ -134,15 +130,13 @@ function UserhashRow({ value, onSave }: { value: string; onSave: (v: string) => 
         </>
       }
     >
-      <Input
+      <DraftInput
         type="password"
-        value={v}
+        value={value}
+        allowEmpty
         placeholder="Anonymous"
-        onChange={(e) => setV(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => e.key === "Enter" && commit()}
+        onCommit={onSave}
         className="w-[240px]"
-        spellCheck={false}
         autoComplete="off"
       />
     </Row>

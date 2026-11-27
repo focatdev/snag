@@ -18,6 +18,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"snag/internal/progress"
 )
 
 const releaseAPI = "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/tags/latest"
@@ -92,22 +94,7 @@ func pickAsset(assets []asset, below int) (asset, *asset, error) {
 	return asset{}, nil, errors.New("no windows build found in release")
 }
 
-type progressWriter struct {
-	done, total int64
-	fn          func(done, total int64)
-	last        int64
-}
-
-func (p *progressWriter) Write(b []byte) (int, error) {
-	p.done += int64(len(b))
-	if p.fn != nil && (p.done-p.last > 512<<10 || p.done == p.total) {
-		p.last = p.done
-		p.fn(p.done, p.total)
-	}
-	return len(b), nil
-}
-
-func Download(ctx context.Context, installDir string, below int, progress func(done, total int64)) (Tools, error) {
+func Download(ctx context.Context, installDir string, below int, onProgress func(done, total int64)) (Tools, error) {
 	client := &http.Client{}
 	req, _ := http.NewRequestWithContext(ctx, "GET", releaseAPI, nil)
 	req.Header.Set("Accept", "application/vnd.github+json")
@@ -163,7 +150,7 @@ func Download(ctx context.Context, installDir string, below int, progress func(d
 	if total <= 0 {
 		total = a.Size
 	}
-	pw := &progressWriter{total: total, fn: progress}
+	pw := &progress.Writer{Total: total, Fn: onProgress}
 	_, err = io.Copy(io.MultiWriter(f, h, pw), resp.Body)
 	f.Close()
 	if err != nil {

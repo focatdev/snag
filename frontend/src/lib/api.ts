@@ -36,6 +36,10 @@ export type Settings = {
   aiModel: string;
   aiAutoTitle: boolean;
   aiTranscribe: boolean;
+  voiceTrigger: boolean;
+  voicePhrase: string;
+  voiceDir: string;
+  voiceSensitivity: number;
   systemDeviceId: string;
   micDeviceId: string;
   hotkeys: Hotkeys;
@@ -93,7 +97,8 @@ export type AppStatus = {
   usage: Usage;
   ffmpeg: { ffmpeg: string; ffprobe: string; version: string };
   ffmpegReady: boolean;
-  download: { active: boolean; done: number; total: number; error: string };
+  download: Download;
+  voice: { ready: boolean; dir: string; error: string; download: Download };
   hotkeyErrors: string[];
   activeJobs: number;
 };
@@ -163,6 +168,8 @@ export type ExportOptions = {
 export type UpdateState = { available: boolean; checking: boolean; latest: string; ready: boolean; error: string; checkedAt: number };
 
 export type Uploader = { id: string; name: string; host: string; builtin: boolean; videoReady: boolean };
+
+export type Download = { active: boolean; done: number; total: number; error: string };
 
 export type AIProvider = { id: string; label: string; model: string; transcribe: boolean; keyUrl: string };
 
@@ -255,6 +262,7 @@ export const api = {
   pickSoundFile: () => call<string>("PickSoundFile"),
   addBookmark: () => call<void>("AddBookmark"),
   downloadFFmpeg: () => call<void>("DownloadFFmpeg"),
+  downloadVoice: () => call<void>("DownloadVoice"),
   reprobe: () => call<Encoder[]>("ReprobeEncoders"),
   audioDevices: () => call<{ outputs: AudioDevice[]; inputs: AudioDevice[] }>("ListAudioDevices"),
   monitors: () => call<Monitor[]>("ListMonitors"),
